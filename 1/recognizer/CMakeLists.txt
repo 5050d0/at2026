@@ -1,7 +1,11 @@
-cmake_minimum_required(VERSION 3.31)
-project(lab1)
 
-set(CMAKE_CXX_STANDARD 23)
-include_subdirectory(recognizer)
-# set(CMAKE_BUILD_TYPE Debug)
-add_executable(lab1 main.cpp)
+
+add_library(recognizer Loader.cpp Loader.h)
+target_link_libraries(recognizer RegexRecognizer)
+
+add_library(IRecognizer INTERFACE IRecognizer.h)
+target_include_directories(IRecognizer INTERFACE ${CMAKE_SOURCE_DIR})
+
+#add_subdirectory(FlexRecognizer)
+add_subdirectory(RegexRecognizer)
+#add_subdirectory(SMCRecognizer)
