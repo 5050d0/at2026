@@ -9,19 +9,23 @@
 #include <iostream>
 
 
+enum class CaptureGroups: char {
+    CAPTURE_FULL = 0,
+    CAPTURE_LEFT_TYPE = 1,
+    CAPTURE_LEFT_NAME = 2,
+    CAPTURE_OP1_NAME = 3,
+    CAPTURE_OP1_NUM = 4,
+    CAPTURE_OP = 5,
+    CAPTURE_OP2_NAME = 6,
+    CAPTURE_OP2_NUM = 7
+};
+
+std::regex const RegexRecognizer::main_regex{
+    R"(^(int|short|long) +([a-zA-Z][a-zA-Z0-9]{0,15}) *= *(?:([a-zA-Z][a-zA-Z0-9]{0,15})|([0-9]+))(?: *([%*/+-]) *(?:([a-zA-Z][a-zA-Z0-9]{0,15})|([0-9]+)))?;$)"
+};
+
 std::pair<bool, std::string> RegexRecognizer::Recognize(std::string row) {
-    std::regex main_regex{
-        "^(int|short|long) +([a-zA-Z][a-zA-Z0-9]{0,15}) *= *(?:([a-zA-Z][a-zA-Z0-9]{0,15})|([0-9]+))(?: *([%*/+-]) *(?:([a-zA-Z][a-zA-Z0-9]{0,15})|([0-9]+)))?;$"
-    };
-    std::vector<std::string> tst = {
-        "int ab= frgfr;",
-        "short Dsasf323 = ab +     5;",
-        "long vA2r23=5+6;",
-        "a ad=5;", "",
-        "int 3d = ab+Dsasf323;",
-        "int a =;"
-    };
-    for (auto &str: tst) {
+    for (const auto &str: tst) {
         std::smatch match;
         if (!std::regex_search(str, match, main_regex)) {
             return {false, ""};
