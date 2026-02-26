@@ -2,8 +2,6 @@
 // Created by kirill on 2/17/26.
 //
 
-#include <regex>
-
 #include "RegexRecognizer.h"
 
 #include <iostream>
@@ -20,16 +18,17 @@
 //     CAPTURE_OP2_NUM = 7
 // };
 
-std::regex const RegexRecognizer::main_regex{
-    R"(^(int|short|long) +([a-zA-Z][a-zA-Z0-9]{0,15}) *= *(?:([a-zA-Z][a-zA-Z0-9]{0,15})|([0-9]+))(?: *([%/*]) *(?:([a-zA-Z][a-zA-Z0-9]{0,15})|([0-9]+)))?;$)"
+boost::regex const RegexRecognizer::main_regex{
+    R"(^ *(int|short|long) +([a-zA-Z][a-zA-Z0-9]{0,15}) *= *(?:([a-zA-Z][a-zA-Z0-9]{0,15})|([0-9]+))(?: *([%/*]) *(?:([a-zA-Z][a-zA-Z0-9]{0,15})|([0-9]+)))? *; *$)"
 };
 std::vector<std::string> const RegexRecognizer::allowed_types = {
     "int", "short", "long"
 };
 
 std::pair<bool, std::string> RegexRecognizer::Recognize(std::string row) {
-    std::smatch match;
-    if (!std::regex_search(row, match, main_regex)) {
+    boost::smatch match;
+
+    if (!boost::regex_search(row, match, main_regex)) {
         return {false, ""};
     }
     if (std::ranges::find(allowed_types, match[1]) == std::ranges::end(allowed_types)) {
@@ -48,6 +47,18 @@ std::pair<bool, std::string> RegexRecognizer::Recognize(std::string row) {
             };
         }
     }
+    // todo проверить чтобы используемые переменные существовали
+    if (match[3].length() > 0) {
+        if (KnownVariables.find(match[3]) == KnownVariables.end()) {
+            return {false, ""};
+        }
+    }
+    if (match[6].length() > 0) {
+        if (KnownVariables.find(match[6]) == KnownVariables.end()) {
+            return {false, ""};
+        }
+    }
+
     // todo надо ли проверять чтобы используемые переменные совпадали типом?
 
     // size_t j = 0;

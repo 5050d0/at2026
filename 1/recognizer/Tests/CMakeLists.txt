@@ -5,7 +5,7 @@ add_executable(
         Recognizer_test.cc
 )
 target_link_libraries(
-        Recognizer_test
+        Recognizer_test PUBLIC
         GTest::gtest_main
         recognizer
 )

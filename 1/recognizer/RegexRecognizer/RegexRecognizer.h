@@ -5,10 +5,10 @@
 
 #include "recognizer/IRecognizer.h"
 #include <unordered_map>
-#include <regex>
+#include <boost/regex.hpp>
 
 class RegexRecognizer final : public IRecognizer {
-    std::regex static const main_regex;
+    boost::regex static const main_regex;
     static std::vector<std::string> const allowed_types;
 
     std::unordered_map<std::string, std::string> KnownVariables;
