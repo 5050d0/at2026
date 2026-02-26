@@ -3,16 +3,17 @@
 //
 #pragma once
 
-#include <unordered_map>
 #include "recognizer/IRecognizer.h"
+#include <unordered_map>
+#include <regex>
 
 class RegexRecognizer final : public IRecognizer {
     std::regex static const main_regex;
+    static std::vector<std::string> const allowed_types;
+
     std::unordered_map<std::string, std::string> KnownVariables;
 
 public:
-    RegexRecognizer();
-
     std::pair<bool, std::string> Recognize(std::string row) override;
 
     void reset() override;;
