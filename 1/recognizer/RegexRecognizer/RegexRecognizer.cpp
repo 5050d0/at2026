@@ -19,55 +19,63 @@
 // };
 
 boost::regex const RegexRecognizer::main_regex{
-    R"(^ *(int|short|long) +([a-zA-Z][a-zA-Z0-9]{0,15}) *= *(?:([a-zA-Z][a-zA-Z0-9]{0,15})|([0-9]+))(?: *([%/*]) *(?:([a-zA-Z][a-zA-Z0-9]{0,15})|([0-9]+)))? *; *$)"
+    "^ *(int|short|long) +([a-zA-Z][a-zA-Z0-9]{0,15}) *= *(?:([a-zA-Z][a-zA-Z0-9]{0,15})|([0-9]+))(?: *([%/*]) *(?:([a-zA-Z][a-zA-Z0-9]{0,15})|([0-9]+)))? *; *$"
 };
 std::vector<std::string> const RegexRecognizer::allowed_types = {
     "int", "short", "long"
 };
 
-std::pair<bool, std::string> RegexRecognizer::Recognize(std::string row) {
+std::optional<RecResult> RegexRecognizer::Recognize(std::string row) {
     boost::smatch match;
 
     if (!boost::regex_search(row, match, main_regex)) {
+        return std::nullopt;
+    }
+    /*if (std::ranges::find(allowed_types, match[1]) == std::ranges::end(allowed_types)) {
         return {false, ""};
-    }
-    if (std::ranges::find(allowed_types, match[1]) == std::ranges::end(allowed_types)) {
-        return {false, ""};
-    }
+    }*/
 
-    auto found = KnownVariables.find(match[2]);
-    if (found == KnownVariables.end()) {
-        KnownVariables[match[2]] = match[1];
-    } else {
-        if (found->second != match[1]) {
-            return {
-                false,
-                std::format("Redeclaration of variable {} with type {} (was type {})", match[2].str(), match[1].str(),
-                            found->second)
-            };
-        }
-    }
-    // todo проверить чтобы используемые переменные существовали
-    if (match[3].length() > 0) {
-        if (KnownVariables.find(match[3]) == KnownVariables.end()) {
-            return {false, ""};
-        }
-    }
-    if (match[6].length() > 0) {
-        if (KnownVariables.find(match[6]) == KnownVariables.end()) {
-            return {false, ""};
-        }
-    }
-
-    // todo надо ли проверять чтобы используемые переменные совпадали типом?
-
-    // size_t j = 0;
-    // for (auto i: match) {
-    //     std::cout << j++ << " : " << i.str() << std::endl;
+    return RecResult{
+        .vartype = match[1].str(), .lvar = match[2].str(), .rvar1 = match[3].str(), .rvar2 = match[6].str()
+    };
+    // if (const auto &found = KnownVariables.find(match[2]); found == KnownVariables.end()) {
+    //     KnownVariables[match[2]] = match[1];
+    // } else {
+    //     if (found->second != match[1]) {
+    //         return {
+    //             false,
+    //             std::format("Redeclaration of variable {} with type {} (was type {})", match[2].str(), match[1].str(),
+    //                         found->second)
+    //         };
+    //     }
     // }
-
-
-    return {true, ""};
+    // if (match[3].length() > 0) {
+    //     if (!KnownVariables.contains(match[3])) {
+    //         return {false, ""};
+    //     }
+    //     if (KnownVariables[match[3]] != match[1]) {
+    //         // todo надо ли проверять чтобы используемые переменные совпадали типом?
+    //         return {
+    //             true, std::format("Variable {} used with type {} (was type {})",
+    //                               match[3].str(), match[1].str(), KnownVariables[match[3]])
+    //         };
+    //     }
+    // }
+    // if (match[6].length() > 0) {
+    //     if (!KnownVariables.contains(match[6])) {
+    //         return {false, ""};
+    //     }
+    //     if (KnownVariables[match[6]] != match[1]) {
+    //         // todo надо ли проверять чтобы используемые переменные совпадали типом?
+    //         return {
+    //             true, std::format("Variable {} used with type {} (was type {})",
+    //                               match[6].str(), match[1].str(), KnownVariables[match[3]])
+    //         };
+    //     }
+    // }
+    //
+    //
+    // return {true, ""};
 }
 
 void RegexRecognizer::reset() {

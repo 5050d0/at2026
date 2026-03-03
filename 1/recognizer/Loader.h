@@ -10,17 +10,18 @@
 #include <vector>
 
 #include "IRecognizer.h"
+#include "Validator.h"
 #include "RegexRecognizer/RegexRecognizer.h"
 
 class Loader {
-    std::map<std::string, std::unique_ptr<IRecognizer> > recognizers;
+    std::map<std::string, Validator> recognizers;
 
 public:
     Loader() {
-        recognizers.emplace("regex", std::make_unique<RegexRecognizer>());
+        recognizers.emplace("regex", Validator{std::make_unique<RegexRecognizer>()});
     }
 
-    std::map<std::string, std::unique_ptr<IRecognizer> > &get_recognizers() {
+    std::map<std::string, Validator> &get_recognizers() {
         return recognizers;
     }
 };
