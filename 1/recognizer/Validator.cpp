@@ -4,14 +4,18 @@
 
 #include "Validator.h"
 
-Validator::Validator(std::unique_ptr<RegexRecognizer> ptr) : recognizer(std::move(ptr)) {
+#include <format>
+#include <utility>
+
+Validator::Validator(std::unique_ptr<IRecognizer> ptr) : recognizer(std::move(ptr)) {
 }
 
 std::pair<bool, std::string> Validator::Validate(std::string line) {
-    const auto res = recognizer->Recognize(line);
+    const auto res = recognizer->Recognize(std::move(line));
 
-    if (!res.has_value()) return {false, ""};
-
+    if (!res.has_value()) {
+        return {false, ""};
+    }
 
     if (!((res->rvar1.empty() || KnownVariables.contains(res->rvar1)) && (
               res->rvar2.empty() || KnownVariables.contains(res->rvar2)))) {

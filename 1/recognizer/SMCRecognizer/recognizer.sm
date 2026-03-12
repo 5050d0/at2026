@@ -1,0 +1,229 @@
+%class Smachine
+%header Smachine.h
+
+%include <string>
+
+
+%start TaskMap::START
+%map TaskMap
+%%
+START Entry {
+    reset();
+}
+{
+    getchar(c:char)
+        [c == ' ' || c == '\t']
+        nil {}
+    getchar(c:char)
+        [c == 'i']
+        VarType{
+            SetVartype("i");
+        }
+    getchar(c:char)
+            [c == 'l']
+            VarType{
+                SetVartype("l");
+            }
+    getchar(c:char)
+            [c == 's']
+            VarType{
+                SetVartype("s");
+            }
+    Default ERROR{}
+}
+VarType{
+    getchar(c:char)
+        [(ctxt.vartype=="long" || ctxt.vartype=="short" || ctxt.vartype=="int") && c == ' ']
+        LVarName{}
+    getchar(c:char)
+        [ctxt.vartype.size() <= 5]
+        VarType{
+            SetVartype(ctxt.vartype+c);
+        }
+    getchar(c:char)
+        ERROR{}
+}
+LVarName{
+    getchar(c:char)
+        [!ctxt.lvarname.empty() && (c==' ' || c == '\t')]
+        EQ{
+        SetFoundEQ(false);
+        }
+    getchar(c:char)
+        [!ctxt.lvarname.empty() && (c=='=')]
+            EQ{
+            SetFoundEQ(true);
+            }
+    getchar(c:char)
+        [ctxt.lvarname.empty() && isalpha(c)]
+        LVarName{
+            SetLvarname(c);
+        }
+    getchar(c:char)
+        [ctxt.lvarname.size()<=15 && isalnum(c)]
+        LVarName{
+            SetLvarname(ctxt.lvarname+c);
+        }
+    getchar(c:char)
+    ERROR{}
+}
+EQ{
+    getchar(c:char)
+    [c==' ' || c=='\t']
+    EQ{}
+
+    getchar(c:char)
+    [c=='=' && ctxt.foundeq == false]
+    EQ{
+    SetFoundEQ(true);
+    }
+     getchar(c:char)
+     [c=='=' && ctxt.foundeq == true]
+     ERROR{}
+
+    getchar(c:char)
+     [ctxt.foundeq == true && isalpha(c)]
+     RVar1{
+        SetRvar1name(c);
+     }
+     getchar(c:char)
+      [ctxt.foundeq == true && isdigit(c)]
+      RVal1{
+      }
+
+      getchar(c:char)
+      [c == ';' && ctxt.foundeq==false]
+     SUCCESS{
+        SetSuccess(true);
+     }
+     getchar(c:char)
+     ERROR{}
+}
+RVar1{
+    getchar(c:char)
+    [ctxt.rvar1name.size()<=15 && isalnum(c)]
+    RVar1{SetRvar1name(ctxt.rvar1name+c);}
+
+    getchar(c:char)
+    [c==' ' || c == '\t']
+    Sign{SetFoundSign(false);}
+
+    getchar(c:char)
+    [c=='%' || c == '/' || c == '*']
+    Sign{SetFoundSign(true);}
+
+    getchar(c:char)
+    [c == ';']
+     SUCCESS{
+        SetSuccess(true);
+     }
+
+
+     getchar(c:char)
+     ERROR{}
+}
+RVal1{
+    getchar(c:char)
+    [isdigit(c)]
+    RVal1{}
+
+    getchar(c:char)
+    [c==' ' || c == '\t']
+    Sign{SetFoundSign(false);}
+
+    getchar(c:char)
+    [c=='%' || c == '/' || c == '*']
+    Sign{SetFoundSign(true);}
+
+    getchar(c:char)
+    [c == ';']
+     SUCCESS{
+        SetSuccess(true);
+     }
+
+     getchar(c:char)
+     ERROR{}
+}
+Sign{
+    getchar(c:char)
+    [c==' ' || c == '\t']
+    Sign{}
+    getchar(c:char)
+    [c==';' && ctxt.foundsign == false]
+     SUCCESS{
+        SetSuccess(true);
+     }
+    getchar(c:char)
+    [c=='%' || c == '/' || c == '*']
+    Sign{SetFoundSign(true);}
+    getchar(c:char)
+    [ctxt.foundsign ==true && isdigit(c) ]
+    RVal2{}
+    getchar(c:char)
+    [ctxt.foundsign ==true && isalpha(c) ]
+    RVar2{
+        SetRvar2name(c);
+    }
+         getchar(c:char)
+         ERROR{}
+
+}
+
+RVar2{
+    getchar(c:char)
+    [ctxt.rvar2name.size()<=15 && isalnum(c)]
+    RVar2{SetRvar2name(ctxt.rvar2name+c);}
+
+    getchar(c:char)
+    [c==' ' || c == '\t']
+    End{}
+
+    getchar(c:char)
+    [c == ';']
+     SUCCESS{
+        SetSuccess(true);
+     }
+
+
+     getchar(c:char)
+     ERROR{}
+}
+RVal2{
+    getchar(c:char)
+    [isdigit(c)]
+    RVal2{}
+
+    getchar(c:char)
+    [c==' ' || c == '\t']
+    End{}
+
+    getchar(c:char)
+    [c == ';']
+     SUCCESS{
+        SetSuccess(true);
+     }
+
+    getchar(c:char)
+    ERROR{}
+}
+End{
+     getchar(c:char)
+     [c==' ' || c == '\t']
+     End{}
+     getchar(c:char)
+     [c == ';']
+     SUCCESS{
+        SetSuccess(true);
+     }
+}
+ERROR{
+    Default ERROR{}
+}
+SUCCESS{
+    Default SUCCESS{}
+}
+
+Default{
+    Reset START{}
+}
+%%

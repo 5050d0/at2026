@@ -6,7 +6,6 @@
 #include "recognizer/IRecognizer.h"
 
 #include <boost/regex.hpp>
-#include <unordered_map>
 
 class RegexRecognizer final : public IRecognizer {
     boost::regex static const main_regex;

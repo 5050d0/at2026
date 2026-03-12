@@ -3,7 +3,10 @@
 //
 
 #pragma once
-#include "RegexRecognizer/RegexRecognizer.h"
+#include <memory>
+#include <unordered_map>
+
+#include "IRecognizer.h"
 
 class Validator {
     std::unique_ptr<IRecognizer> recognizer;
@@ -12,7 +15,7 @@ class Validator {
 public:
     Validator() = default;
 
-    explicit Validator(std::unique_ptr<RegexRecognizer> ptr);
+    explicit Validator(std::unique_ptr<IRecognizer> ptr);
 
     std::pair<bool, std::string> Validate(std::string line);
 

@@ -10,6 +10,8 @@ pkgs.mkShell {
     boost
     pkg-config
     gdb
+    smc
+    flex
   ];
 
   shellHook = ''
