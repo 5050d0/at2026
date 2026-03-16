@@ -11,6 +11,8 @@
 
 #include "IRecognizer.h"
 #include "Validator.h"
+
+#include "FlexRecognizer/FlexRecognizer.h"
 #include "RegexRecognizer/RegexRecognizer.h"
 #include "SMCRecognizer/SmcRecognizer.h"
 
@@ -21,6 +23,7 @@ public:
     Loader() {
         recognizers.emplace("regex", Validator{std::make_unique<RegexRecognizer>()});
         recognizers.emplace("smc", Validator{std::make_unique<SmcRecognizer>()});
+        recognizers.emplace("flex", Validator{std::make_unique<FlexRecognizer>()});
     }
 
     std::map<std::string, Validator> &get_recognizers() {

@@ -33,7 +33,7 @@ START Entry {
 }
 VarType{
     getchar(c:char)
-        [(ctxt.vartype=="long" || ctxt.vartype=="short" || ctxt.vartype=="int") && c == ' ']
+        [ c == ' ' &&(ctxt.vartype=="long" || ctxt.vartype=="short" || ctxt.vartype=="int") ]
         LVarName{}
     getchar(c:char)
         [ctxt.vartype.size() <= 5]

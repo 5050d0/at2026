@@ -19,3 +19,5 @@ add_subdirectory(recognizer)
 add_executable(lab1 main.cpp)
 target_link_libraries(lab1 recognizer)
 
+add_executable(speedtest speedtest.cpp)
+target_link_libraries(speedtest recognizer)
