@@ -4,7 +4,7 @@
 
 #include "SmcRecognizer.h"
 
-std::optional<RecResult> SmcRecognizer::Recognize(std::string row) {
+std::optional<RecResult> SmcRecognizer::Recognize(const std::string &row) {
     bool const success = machine.run(row);
     if (success) {
         RecResult result{

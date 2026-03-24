@@ -25,7 +25,7 @@ std::vector<std::string> const RegexRecognizer::allowed_types = {
     "int", "short", "long"
 };
 
-std::optional<RecResult> RegexRecognizer::Recognize(std::string row) {
+std::optional<RecResult> RegexRecognizer::Recognize(const std::string &row) {
     boost::smatch match;
 
     if (!boost::regex_search(row, match, main_regex)) {

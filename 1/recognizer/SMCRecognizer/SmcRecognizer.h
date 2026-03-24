@@ -12,7 +12,7 @@ class SmcRecognizer : public IRecognizer {
     Smachine machine;
 
 public:
-    std::optional<RecResult> Recognize(std::string row) override;
+    std::optional<RecResult> Recognize(const std::string &row) override;
 
     void reset() override;
 };

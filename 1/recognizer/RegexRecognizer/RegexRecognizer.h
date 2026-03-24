@@ -12,7 +12,7 @@ class RegexRecognizer final : public IRecognizer {
     static std::vector<std::string> const allowed_types;
 
 public:
-    std::optional<RecResult> Recognize(std::string row) override;
+    std::optional<RecResult> Recognize(const std::string &row) override;
 
     void reset() override;;
 };

@@ -18,7 +18,7 @@ class IRecognizer {
 public:
     virtual ~IRecognizer() = default;
 
-    virtual std::optional<RecResult> Recognize(std::string row) = 0;
+    virtual std::optional<RecResult> Recognize(const std::string &row) = 0;
 
     virtual void reset() = 0;
 };

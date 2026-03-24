@@ -10,8 +10,8 @@
 Validator::Validator(std::unique_ptr<IRecognizer> ptr) : recognizer(std::move(ptr)) {
 }
 
-std::pair<bool, std::string> Validator::Validate(std::string line) {
-    const auto res = recognizer->Recognize(std::move(line));
+std::pair<bool, std::string> Validator::Validate(const std::string &line) {
+    const auto res = recognizer->Recognize(line);
 
     if (!res.has_value()) {
         return {false, ""};

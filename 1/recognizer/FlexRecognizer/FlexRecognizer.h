@@ -10,7 +10,7 @@
 
 class FlexRecognizer : public IRecognizer {
 public:
-    std::optional<RecResult> Recognize(std::string row) override {
+    std::optional<RecResult> Recognize(const std::string &row) override {
         std::optional<std::array<std::string, 4> > ex = extract(row);
         if (ex.has_value()) {
             auto t = ex.value();

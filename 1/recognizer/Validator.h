@@ -17,7 +17,7 @@ public:
 
     explicit Validator(std::unique_ptr<IRecognizer> ptr);
 
-    std::pair<bool, std::string> Validate(std::string line);
+    std::pair<bool, std::string> Validate(const std::string &line);
 
     void reset();
 };
