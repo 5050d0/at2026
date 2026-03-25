@@ -96,16 +96,22 @@ std::vector<std::string> generate_strings(size_t amount, size_t length) {
 
 int main() {
     Loader loader;
-    std::vector<std::string> data = generate_strings(1, 5000);
-    for (auto &i: loader.get_recognizers()) {
-        auto start_time = std::chrono::high_resolution_clock::now();
-        for (auto &s: data) {
-            i.second.Validate(s);
-        }
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
+    std::vector<size_t> const lengths = {
+        1000, 5000, 10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000
+    };
+    for (const auto &stringlength: lengths) {
+        std::vector<std::string> data = generate_strings(500, stringlength);
+        for (auto &i: loader.get_recognizers()) {
+            auto start_time = std::chrono::high_resolution_clock::now();
+            for (auto &s: data) {
+                i.second.Validate(s);
+            }
+            auto end_time = std::chrono::high_resolution_clock::now();
+            auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
 
-        std::cout << i.first << " execution time: " << duration_us.count() << " µs" << '\n';
+            std::cout << "String length: " << stringlength << ", recognizer type: " << i.first << " execution time: " <<
+                    duration_us.count() << " µs" << '\n';
+        }
     }
     return 0;
 }
