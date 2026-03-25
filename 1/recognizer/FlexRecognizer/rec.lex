@@ -47,21 +47,38 @@ SEMICOLON (";")
 
 %%
 
-
 bool isVarOrNum(TokenType type) {
     return type == TokenType::VARNAME || type == TokenType::NUMBER;
 }
 
+class StringLexer : public yyFlexLexer {
+    const char* input_ptr;
+    size_t input_len;
+
+public:
+    StringLexer(const std::string& str)
+        : input_ptr(str.data()), input_len(str.length()) {}
+
+    int LexerInput(char* buf, int max_size) override {
+        int to_copy = std::min(max_size, static_cast<int>(input_len));
+        if (to_copy > 0) {
+            std::memcpy(buf, input_ptr, to_copy);
+            input_ptr += to_copy;
+            input_len -= to_copy;
+            return to_copy;
+        }
+        return 0;
+    }
+};
+
 std::optional<std::array<std::string, 4>> extract(const std::string& line) {
     current_tokens.clear();
 
-    std::istringstream input_stream(line);
-    yyFlexLexer lexer(&input_stream);
+    StringLexer lexer(line);
 
     lexer.yylex();
 
     std::array<std::string, 4> data;
-
 
     if (current_tokens.size() == 5) {
         if (current_tokens[0].type == TokenType::VARTYPE &&
@@ -79,7 +96,6 @@ std::optional<std::array<std::string, 4>> extract(const std::string& line) {
             return data;
         }
     }
-
     else if (current_tokens.size() == 7) {
         if (current_tokens[0].type == TokenType::VARTYPE &&
             current_tokens[1].type == TokenType::VARNAME &&
