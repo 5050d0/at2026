@@ -1,7 +1,6 @@
 %{
 #include <array>
 #include <optional>
-#include <sstream>
 #include <vector>
 #include <string>
 
@@ -20,11 +19,15 @@ struct Token {
     TokenType type;
     std::string text;
 };
-
+struct FlexBufferGuard {
+    YY_BUFFER_STATE buffer;
+    FlexBufferGuard(YY_BUFFER_STATE b) : buffer(b) {}
+    ~FlexBufferGuard() { yy_delete_buffer(buffer); }
+};
 %}
 
+%option outfile="lex.yy.cc"
 %option noyywrap
-%option c++
 
 VARTYPE   ("int"|"short"|"long")
 VARNAME   ([a-zA-Z][a-zA-Z0-9]{0,15})
@@ -48,56 +51,40 @@ SEMICOLON ";"
 
 %%
 
-
 std::optional<std::array<std::string, 4>> extract(const std::string& line) {
     std::array<std::string, 4> data;
-    std::istringstream in_stream(line);
 
-    yyFlexLexer lexer(&in_stream);
+    YY_BUFFER_STATE buffer = yy_scan_string(line.data());
+    FlexBufferGuard guard(buffer);
 
-    TokenType type = static_cast<TokenType>(lexer.yylex());
-    if (type != TokenType::VARTYPE) {
-            return std::nullopt;
-    }
-    data[0] = lexer.YYText();
+    TokenType type = static_cast<TokenType>(yylex());
+    if (type != TokenType::VARTYPE) return std::nullopt;
+    data[0] = yytext;
 
-    if (static_cast<TokenType>(lexer.yylex()) != TokenType::VARNAME){
-                return std::nullopt;
-    }
-    data[1] = lexer.YYText();
-    if (static_cast<TokenType>(lexer.yylex()) != TokenType::EQUALS){
-        return std::nullopt;
-    }
+    if (static_cast<TokenType>(yylex()) != TokenType::VARNAME) return std::nullopt;
+    data[1] = yytext;
 
-    type = static_cast<TokenType>(lexer.yylex());
-    if (type != TokenType::VARNAME && type != TokenType::NUMBER){
-        return std::nullopt;
-    }
-    if (type == TokenType::VARNAME){
-        data[2] = lexer.YYText();
-    }
-    type = static_cast<TokenType>(lexer.yylex());
+    if (static_cast<TokenType>(yylex()) != TokenType::EQUALS) return std::nullopt;
+
+    type = static_cast<TokenType>(yylex());
+    if (type != TokenType::VARNAME && type != TokenType::NUMBER) return std::nullopt;
+    if (type == TokenType::VARNAME) data[2] = yytext;
+
+    type = static_cast<TokenType>(yylex());
     if (type == TokenType::SEMICOLON) {
-         if (static_cast<TokenType>(lexer.yylex()) != TokenType::TOKEN_EOF){
-                return std::nullopt;
-            }
+         if (static_cast<TokenType>(yylex()) != TokenType::TOKEN_EOF) return std::nullopt;
          return data;
     }
-    if (type!=TokenType::SIGN) {
-        return std::nullopt;
-    }
-    type = static_cast<TokenType>(lexer.yylex());
-    if (type != TokenType::VARNAME && type != TokenType::NUMBER){
-        return std::nullopt;
-    }
-    if (type==TokenType::VARNAME) {
-        data[3] = lexer.YYText();
-    }
-    type = static_cast<TokenType>(lexer.yylex());
+
+    if (type != TokenType::SIGN) return std::nullopt;
+
+    type = static_cast<TokenType>(yylex());
+    if (type != TokenType::VARNAME && type != TokenType::NUMBER) return std::nullopt;
+    if (type == TokenType::VARNAME) data[3] = yytext;
+
+    type = static_cast<TokenType>(yylex());
     if (type == TokenType::SEMICOLON) {
-         if (static_cast<TokenType>(lexer.yylex()) != TokenType::TOKEN_EOF){
-                return std::nullopt;
-            }
+         if (static_cast<TokenType>(yylex()) != TokenType::TOKEN_EOF) return std::nullopt;
          return data;
     }
 
