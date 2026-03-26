@@ -9,13 +9,13 @@ using namespace std;
 int main() {
     Loader loader;
     auto &a = loader.get_recognizers()["flex"];
-    auto res = a.Validate("int ab= 444;");
+    auto res = a.Validate("int Dsasf323 = ab /     5;");
 
 
     res = a.Validate("long ab = 4;");
     // FlexRecognizer flexRecognizer;
     // auto res = flexRecognizer.Recognize("int ab= 444;");
     // res = flexRecognizer.Recognize("long ab = 4;");
-    // return 0;
+    // reurn 0;
 }
 

@@ -12,7 +12,8 @@ enum class TokenType {
     SIGN,
     EQUALS,
     SEMICOLON,
-    UNKNOWN
+    UNKNOWN,
+    TOKEN_EOF
 };
 
 struct Token {
@@ -20,7 +21,6 @@ struct Token {
     std::string text;
 };
 
-static std::vector<Token> current_tokens;
 %}
 
 %option noyywrap
@@ -30,89 +30,76 @@ VARTYPE   ("int"|"short"|"long")
 VARNAME   ([a-zA-Z][a-zA-Z0-9]{0,15})
 NUMBER    ([0-9]+)
 SIGN      ([%/*])
-SPACE     ([ \t\n\r]+)
-EQUALS    ("=")
-SEMICOLON (";")
+SPACE     [[:space:]]+
+EQUALS    "="
+SEMICOLON ";"
 
 %%
 
-{VARTYPE}   { current_tokens.push_back({TokenType::VARTYPE, YYText()}); }
-{VARNAME}   { current_tokens.push_back({TokenType::VARNAME, YYText()}); }
-{NUMBER}    { current_tokens.push_back({TokenType::NUMBER, YYText()}); }
-{SIGN}      { current_tokens.push_back({TokenType::SIGN, YYText()}); }
-{EQUALS}    { current_tokens.push_back({TokenType::EQUALS, YYText()}); }
-{SEMICOLON} { current_tokens.push_back({TokenType::SEMICOLON, YYText()}); }
+{VARTYPE}   { return static_cast<int>(TokenType::VARTYPE); }
+{VARNAME}   { return static_cast<int>(TokenType::VARNAME); }
+{NUMBER}    { return static_cast<int>(TokenType::NUMBER); }
+{SIGN}      { return static_cast<int>(TokenType::SIGN); }
+{EQUALS}    { return static_cast<int>(TokenType::EQUALS); }
+{SEMICOLON} { return static_cast<int>(TokenType::SEMICOLON); }
 {SPACE}     {}
-.           { current_tokens.push_back({TokenType::UNKNOWN, YYText()}); }
+<<EOF>>     { return static_cast<int>(TokenType::TOKEN_EOF); }
+.           { return static_cast<int>(TokenType::UNKNOWN); }
 
 %%
 
-bool isVarOrNum(TokenType type) {
-    return type == TokenType::VARNAME || type == TokenType::NUMBER;
-}
-
-class StringLexer : public yyFlexLexer {
-    const char* input_ptr;
-    size_t input_len;
-
-public:
-    StringLexer(const std::string& str)
-        : input_ptr(str.data()), input_len(str.length()) {}
-
-    int LexerInput(char* buf, int max_size) override {
-        int to_copy = std::min(max_size, static_cast<int>(input_len));
-        if (to_copy > 0) {
-            std::memcpy(buf, input_ptr, to_copy);
-            input_ptr += to_copy;
-            input_len -= to_copy;
-            return to_copy;
-        }
-        return 0;
-    }
-};
 
 std::optional<std::array<std::string, 4>> extract(const std::string& line) {
-    current_tokens.clear();
-
-    StringLexer lexer(line);
-
-    lexer.yylex();
-
     std::array<std::string, 4> data;
+    std::istringstream in_stream(line);
 
-    if (current_tokens.size() == 5) {
-        if (current_tokens[0].type == TokenType::VARTYPE &&
-            current_tokens[1].type == TokenType::VARNAME &&
-            current_tokens[2].type == TokenType::EQUALS &&
-            isVarOrNum(current_tokens[3].type) &&
-            current_tokens[4].type == TokenType::SEMICOLON) {
+    yyFlexLexer lexer(&in_stream);
 
-            data[0] = current_tokens[0].text;
-            data[1] = current_tokens[1].text;
-
-            data[2] = (current_tokens[3].type == TokenType::VARNAME) ? current_tokens[3].text : "";
-            data[3] = "";
-
-            return data;
-        }
+    TokenType type = static_cast<TokenType>(lexer.yylex());
+    if (type != TokenType::VARTYPE) {
+            return std::nullopt;
     }
-    else if (current_tokens.size() == 7) {
-        if (current_tokens[0].type == TokenType::VARTYPE &&
-            current_tokens[1].type == TokenType::VARNAME &&
-            current_tokens[2].type == TokenType::EQUALS &&
-            isVarOrNum(current_tokens[3].type) &&
-            current_tokens[4].type == TokenType::SIGN &&
-            isVarOrNum(current_tokens[5].type) &&
-            current_tokens[6].type == TokenType::SEMICOLON) {
+    data[0] = lexer.YYText();
 
-            data[0] = current_tokens[0].text;
-            data[1] = current_tokens[1].text;
-
-            data[2] = (current_tokens[3].type == TokenType::VARNAME) ? current_tokens[3].text : "";
-            data[3] = (current_tokens[5].type == TokenType::VARNAME) ? current_tokens[5].text : "";
-
-            return data;
-        }
+    if (static_cast<TokenType>(lexer.yylex()) != TokenType::VARNAME){
+                return std::nullopt;
     }
+    data[1] = lexer.YYText();
+    if (static_cast<TokenType>(lexer.yylex()) != TokenType::EQUALS){
+        return std::nullopt;
+    }
+
+    type = static_cast<TokenType>(lexer.yylex());
+    if (type != TokenType::VARNAME && type != TokenType::NUMBER){
+        return std::nullopt;
+    }
+    if (type == TokenType::VARNAME){
+        data[2] = lexer.YYText();
+    }
+    type = static_cast<TokenType>(lexer.yylex());
+    if (type == TokenType::SEMICOLON) {
+         if (static_cast<TokenType>(lexer.yylex()) != TokenType::TOKEN_EOF){
+                return std::nullopt;
+            }
+         return data;
+    }
+    if (type!=TokenType::SIGN) {
+        return std::nullopt;
+    }
+    type = static_cast<TokenType>(lexer.yylex());
+    if (type != TokenType::VARNAME && type != TokenType::NUMBER){
+        return std::nullopt;
+    }
+    if (type==TokenType::VARNAME) {
+        data[3] = lexer.YYText();
+    }
+    type = static_cast<TokenType>(lexer.yylex());
+    if (type == TokenType::SEMICOLON) {
+         if (static_cast<TokenType>(lexer.yylex()) != TokenType::TOKEN_EOF){
+                return std::nullopt;
+            }
+         return data;
+    }
+
     return std::nullopt;
 }

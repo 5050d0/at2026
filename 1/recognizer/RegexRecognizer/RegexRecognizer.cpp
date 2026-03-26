@@ -31,51 +31,9 @@ std::optional<RecResult> RegexRecognizer::Recognize(const std::string &row) {
     if (!boost::regex_search(row, match, main_regex)) {
         return std::nullopt;
     }
-    /*if (std::ranges::find(allowed_types, match[1]) == std::ranges::end(allowed_types)) {
-        return {false, ""};
-    }*/
-
     return RecResult{
         .vartype = match[1].str(), .lvar = match[2].str(), .rvar1 = match[3].str(), .rvar2 = match[6].str()
     };
-    // if (const auto &found = KnownVariables.find(match[2]); found == KnownVariables.end()) {
-    //     KnownVariables[match[2]] = match[1];
-    // } else {
-    //     if (found->second != match[1]) {
-    //         return {
-    //             false,
-    //             std::format("Redeclaration of variable {} with type {} (was type {})", match[2].str(), match[1].str(),
-    //                         found->second)
-    //         };
-    //     }
-    // }
-    // if (match[3].length() > 0) {
-    //     if (!KnownVariables.contains(match[3])) {
-    //         return {false, ""};
-    //     }
-    //     if (KnownVariables[match[3]] != match[1]) {
-    //         // todo надо ли проверять чтобы используемые переменные совпадали типом?
-    //         return {
-    //             true, std::format("Variable {} used with type {} (was type {})",
-    //                               match[3].str(), match[1].str(), KnownVariables[match[3]])
-    //         };
-    //     }
-    // }
-    // if (match[6].length() > 0) {
-    //     if (!KnownVariables.contains(match[6])) {
-    //         return {false, ""};
-    //     }
-    //     if (KnownVariables[match[6]] != match[1]) {
-    //         // todo надо ли проверять чтобы используемые переменные совпадали типом?
-    //         return {
-    //             true, std::format("Variable {} used with type {} (was type {})",
-    //                               match[6].str(), match[1].str(), KnownVariables[match[3]])
-    //         };
-    //     }
-    // }
-    //
-    //
-    // return {true, ""};
 }
 
 void RegexRecognizer::reset() {
