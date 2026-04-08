@@ -1,7 +1,5 @@
 package myregex
 
-import "errors"
-
 type RegexResult struct {
 	Match  string
 	Groups []string
@@ -29,14 +27,15 @@ type nfa struct{}
 type dfa struct{}
 
 func Compile(pattern string) (Regex, error) {
-	if pattern == "" {
-		return nil, errors.New("pattern is empty")
-	}
 	ast, err := buildAst(pattern)
 	if err != nil {
 		return nil, err
 	}
-	ast.hasGroups()
+	if ast.hasGroups() {
+
+	} else {
+
+	}
 	//todo
 	return nil, nil
 }
