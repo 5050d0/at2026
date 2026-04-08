@@ -103,6 +103,13 @@ func (n nodeGroupRef) children() (node, node) {
 func (n nodeGroupRef) reverse() node {
 	return n
 }
+
+type nodeEpsilon struct {
+}
+
+func (n nodeEpsilon) children() (node, node) { return nil, nil }
+func (n nodeEpsilon) reverse() node          { return nodeEpsilon{} }
+
 func hasGroups(n node) bool {
 	if n == nil {
 		return false

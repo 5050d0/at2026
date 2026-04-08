@@ -87,7 +87,7 @@ func tokenize(pattern string) ([]string, error) {
 
 	return tokens, nil
 }
-func node_from_tokens(tokens []string) node {
+func node_from_tokens(tokens []string) (node, error) {
 
 }
 func buildAst(pattern string) (ast, error) {
@@ -97,6 +97,6 @@ func buildAst(pattern string) (ast, error) {
 		return ast{}, err
 	}
 	tree := ast{}
-	tree.root = node_from_tokens(tokens)
-	return ast{}, nil
+	tree.root, err = node_from_tokens(tokens)
+	return tree, err
 }
