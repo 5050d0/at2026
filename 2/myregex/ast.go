@@ -15,6 +15,7 @@ func (a ast) hasGroups() bool {
 func tokenize(pattern string) ([]string, error) {
 	var tokens []string
 	i := 0
+	captureGroupNumber := 0
 	runes := []rune(pattern)
 	n := len(runes)
 
@@ -72,7 +73,11 @@ func tokenize(pattern string) ([]string, error) {
 			tokens = append(tokens, "(:")
 			i += 2
 
-		case ch == '(' || ch == ')' || ch == '|' || ch == '$':
+		case ch == '(':
+			tokens = append(tokens, fmt.Sprintf("(%d)", captureGroupNumber))
+			captureGroupNumber++
+			i++
+		case ch == ')' || ch == '|' || ch == '$':
 			tokens = append(tokens, string(ch))
 			i++
 
@@ -146,11 +151,28 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		}
 		return nodeRepeat{child: left, number: val}, nil
 	case tokens[main_op][0] == '(' && tokens[main_op][1] == ':':
-	//todo
+		return nodeFromTokens(tokens, rng{main_op + 1, r.to})
 	case tokens[main_op][0] == '(':
-	//todo
+		right, err := nodeFromTokens(tokens, rng{main_op, r.to})
+		if err != nil {
+			return nil, err
+		}
+		var val int
+		_, err = fmt.Sscanf(tokens[main_op], "(%d)", &val)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't get capture group index at pos %d", r.from)
+		}
+		return nodeGroup{child: right, index: val}, nil
+
 	case tokens[main_op][0] == '\\':
-		//todo
+		if '1' <= tokens[main_op][1] && tokens[main_op][1] <= '9' {
+			var val int
+			_, err = fmt.Sscanf(tokens[main_op], "\\%d", &val)
+			if err != nil {
+				return nil, fmt.Errorf("couldn't get capture group expr index at pos %d", r.from)
+			}
+			return nodeGroupRef{val}, nil
+		}
 	default:
 		return nil, fmt.Errorf("unknown operator '%s'", tokens[main_op])
 	}
@@ -160,6 +182,10 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 
 func findMainOp(tokens []string, r rng) (int, error) {
 	//todo
+	i := r.from
+	for i < r.to {
+
+	}
 	return 0, nil
 }
 func canBeLeft(tok string) bool {
