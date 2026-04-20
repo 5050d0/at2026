@@ -102,7 +102,7 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 	if len(tokens) == 0 {
 		return nil, fmt.Errorf("empty token")
 	}
-	if r.from >= r.to {
+	if r.from > r.to {
 		return nil, nil
 	}
 	main_op, err := findMainOp(tokens, r)
@@ -111,7 +111,7 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 	}
 	switch {
 	case tokens[main_op] == "|":
-		left, err := nodeFromTokens(tokens, rng{r.from, main_op})
+		left, err := nodeFromTokens(tokens, rng{r.from, main_op - 1})
 		if err != nil {
 			return nil, err
 		}
@@ -121,7 +121,7 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		}
 		return nodeOr{left, right}, nil
 	case tokens[main_op] == "concat":
-		left, err := nodeFromTokens(tokens, rng{r.from, main_op})
+		left, err := nodeFromTokens(tokens, rng{r.from, main_op - 1})
 		if err != nil {
 			return nil, err
 		}
@@ -131,7 +131,7 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		}
 		return nodeAnd{left, right}, nil
 	case tokens[main_op] == "...":
-		left, err := nodeFromTokens(tokens, rng{r.from, main_op})
+		left, err := nodeFromTokens(tokens, rng{r.from, main_op - 1})
 		if err != nil {
 			return nil, err
 		}
@@ -145,25 +145,37 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error parsing inside {} at pos %d", r.from)
 		}
-		left, err := nodeFromTokens(tokens, rng{r.from, main_op})
+		left, err := nodeFromTokens(tokens, rng{r.from, main_op - 1})
 		if err != nil {
 			return nil, err
 		}
 		return nodeRepeat{child: left, number: val}, nil
-	case tokens[main_op][0] == '(' && tokens[main_op][1] == ':':
-		return nodeFromTokens(tokens, rng{main_op + 1, r.to})
-	case tokens[main_op][0] == '(':
-		right, err := nodeFromTokens(tokens, rng{main_op, r.to})
+	case tokens[main_op] == "(:":
+		closeIdx, err := findMatchingParen(tokens, main_op, r.to)
 		if err != nil {
 			return nil, err
 		}
-		var val int
-		_, err = fmt.Sscanf(tokens[main_op], "(%d)", &val)
+		inner, err := nodeFromTokens(tokens, rng{main_op + 1, closeIdx - 1})
 		if err != nil {
-			return nil, fmt.Errorf("couldn't get capture group index at pos %d", r.from)
+			return nil, err
 		}
-		return nodeGroup{child: right, index: val}, nil
+		return inner, nil
 
+	case len(tokens[main_op]) >= 2 && tokens[main_op][0] == '(' && tokens[main_op][1] != ':':
+		var capNum int
+		_, err := fmt.Sscanf(tokens[main_op], "(%d)", &capNum)
+		if err != nil {
+			return nil, fmt.Errorf("invalid capture group token %q", tokens[main_op])
+		}
+		closeIdx, err := findMatchingParen(tokens, main_op, r.to)
+		if err != nil {
+			return nil, err
+		}
+		child, err := nodeFromTokens(tokens, rng{main_op + 1, closeIdx - 1})
+		if err != nil {
+			return nil, err
+		}
+		return nodeGroup{child: child, index: capNum}, nil
 	case tokens[main_op][0] == '\\':
 		if '1' <= tokens[main_op][1] && tokens[main_op][1] <= '9' {
 			var val int
@@ -173,20 +185,78 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 			}
 			return nodeGroupRef{val}, nil
 		}
+	case r.to == r.from:
+		return nodeLiteral{[]rune(tokens[main_op])[0]}, nil
 	default:
 		return nil, fmt.Errorf("unknown operator '%s'", tokens[main_op])
 	}
 
 	return nil, nil
 }
-
-func findMainOp(tokens []string, r rng) (int, error) {
-	//todo
-	i := r.from
-	for i < r.to {
-
+func findMatchingParen(tokens []string, start int, end int) (int, error) {
+	depth := 1
+	i := start + 1
+	for i <= end {
+		tok := tokens[i]
+		if len(tok) > 0 && tok[0] == '(' {
+			depth++
+		} else if tok == ")" {
+			depth--
+			if depth == 0 {
+				return i, nil
+			}
+		}
+		i++
 	}
-	return 0, nil
+	return 0, fmt.Errorf("unmatched parenthesis at token %d", start)
+}
+func findMainOp(tokens []string, r rng) (int, error) {
+	depth := 0
+	bestIdx := -1
+	bestPrio := 999
+
+	for i := r.from; i <= r.to; i++ {
+		tok := tokens[i]
+
+		if len(tok) > 0 && tok[0] == '(' {
+			depth++
+		} else if tok == ")" {
+			depth--
+			if depth < 0 {
+				return 0, fmt.Errorf("unmatched closing parenthesis at token %d", i)
+			}
+		} else {
+			if depth == 0 {
+				prio := 0
+				switch {
+				case tok == "|":
+					prio = 1
+				case tok == "concat":
+					prio = 2
+				case tok == "...":
+					if i > r.from {
+						prio = 3
+					}
+				case len(tok) > 0 && tok[0] == '{':
+					if i > r.from {
+						prio = 3
+					}
+				}
+				if prio > 0 && prio <= bestPrio {
+					bestPrio = prio
+					bestIdx = i
+				}
+			}
+		}
+	}
+
+	if depth != 0 {
+		return 0, fmt.Errorf("unclosed parenthesis")
+	}
+	if bestIdx != -1 {
+		return bestIdx, nil
+	}
+	return r.from, nil
 }
 func canBeLeft(tok string) bool {
 	switch tok {
@@ -224,6 +294,9 @@ func canBeRight(tok string) bool {
 	if len(tok) > 1 && tok[0] == '{' {
 		return false
 	}
+	if len(tok) > 1 && tok[0] == '(' {
+		return true
+	}
 	if len(tok) > 1 && tok[0] == '[' {
 		return true
 	}
@@ -257,13 +330,15 @@ func concatenize(tokens []string) []string {
 	return result
 }
 func buildAst(pattern string) (ast, error) {
-	pattern = "(" + pattern + ")"
+	pattern = "(:" + pattern + ")"
 	tokens, err := tokenize(pattern)
 	if err != nil {
 		return ast{}, err
 	}
 	tokens = concatenize(tokens)
 	tree := ast{}
-	tree.root, err = nodeFromTokens(tokens, rng{0, len(tokens)})
+	tree.root, err = nodeFromTokens(tokens, rng{0, len(tokens) - 1})
+	//todo
+	_ = tree.WriteDot("tree.dot")
 	return tree, err
 }

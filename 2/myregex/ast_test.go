@@ -236,12 +236,12 @@ func TestTokenize(t *testing.T) {
 		{
 			name:  "parens",
 			input: "(ab)",
-			want:  []string{"(", "a", "b", ")"},
+			want:  []string{"(0)", "a", "b", ")"},
 		},
 		{
 			name:  "empty parens",
 			input: "()",
-			want:  []string{"(", ")"},
+			want:  []string{"(0)", ")"},
 		},
 
 		// Kleene closure '...'
@@ -253,7 +253,7 @@ func TestTokenize(t *testing.T) {
 		{
 			name:  "kleene on group",
 			input: "(ab)...",
-			want:  []string{"(", "a", "b", ")", "..."},
+			want:  []string{"(0)", "a", "b", ")", "..."},
 		},
 		{
 			name:  "single dot is literal",
@@ -319,7 +319,7 @@ func TestTokenize(t *testing.T) {
 		{
 			name:  "non-capturing vs capturing",
 			input: "(:a)|(b)",
-			want:  []string{"(:", "a", ")", "|", "(", "b", ")"},
+			want:  []string{"(:", "a", ")", "|", "(0)", "b", ")"},
 		},
 
 		// Escape sequences
@@ -348,24 +348,24 @@ func TestTokenize(t *testing.T) {
 		{
 			name:  "backreference \\1",
 			input: `(a)\1`,
-			want:  []string{"(", "a", ")", `\1`},
+			want:  []string{"(0)", "a", ")", `\1`},
 		},
 		{
 			name:  "backreference \\12",
 			input: `(a)\12`,
-			want:  []string{"(", "a", ")", `\12`},
+			want:  []string{"(0)", "a", ")", `\12`},
 		},
 
 		// Complex expressions
 		{
 			name:  "alternation with groups",
 			input: "(ab)|(cd)",
-			want:  []string{"(", "a", "b", ")", "|", "(", "c", "d", ")"},
+			want:  []string{"(0)", "a", "b", ")", "|", "(1)", "c", "d", ")"},
 		},
 		{
 			name:  "nested groups",
 			input: "(a(bc))",
-			want:  []string{"(", "a", "(", "b", "c", ")", ")"},
+			want:  []string{"(0)", "a", "(1)", "b", "c", ")", ")"},
 		},
 		{
 			name:  "class with kleene",

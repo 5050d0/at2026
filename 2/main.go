@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	fmt.Println(myregex.Compile(""))
+	fmt.Println(myregex.Compile("(a...a...(a...a...)\\2)\\1\\2"))
 }

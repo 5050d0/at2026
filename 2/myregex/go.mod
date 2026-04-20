@@ -1,3 +1,3 @@
-module 5050d0/myregex
+module myregex
 
 go 1.26
