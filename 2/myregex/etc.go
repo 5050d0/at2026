@@ -6,7 +6,6 @@ import (
 	"strconv"
 )
 
-// WriteDot сохраняет AST в файл в формате Graphviz DOT.
 func (a ast) WriteDot(filename string) error {
 	f, err := os.Create(filename)
 	if err != nil {

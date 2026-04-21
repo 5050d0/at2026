@@ -105,93 +105,96 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 	if r.from > r.to {
 		return nil, nil
 	}
-	main_op, err := findMainOp(tokens, r)
+	mainOp, err := findMainOp(tokens, r)
 	if err != nil {
 		return nil, err
 	}
 	switch {
-	case tokens[main_op] == "|":
-		left, err := nodeFromTokens(tokens, rng{r.from, main_op - 1})
+	case tokens[mainOp] == "|":
+		left, err := nodeFromTokens(tokens, rng{r.from, mainOp - 1})
 		if err != nil {
 			return nil, err
 		}
-		right, err := nodeFromTokens(tokens, rng{main_op + 1, r.to})
+		right, err := nodeFromTokens(tokens, rng{mainOp + 1, r.to})
 		if err != nil {
 			return nil, err
 		}
 		return nodeOr{left, right}, nil
-	case tokens[main_op] == "concat":
-		left, err := nodeFromTokens(tokens, rng{r.from, main_op - 1})
+	case tokens[mainOp] == "concat":
+		left, err := nodeFromTokens(tokens, rng{r.from, mainOp - 1})
 		if err != nil {
 			return nil, err
 		}
-		right, err := nodeFromTokens(tokens, rng{main_op + 1, r.to})
+		right, err := nodeFromTokens(tokens, rng{mainOp + 1, r.to})
 		if err != nil {
 			return nil, err
 		}
 		return nodeAnd{left, right}, nil
-	case tokens[main_op] == "...":
-		left, err := nodeFromTokens(tokens, rng{r.from, main_op - 1})
+	case tokens[mainOp] == "...":
+		left, err := nodeFromTokens(tokens, rng{r.from, mainOp - 1})
 		if err != nil {
 			return nil, err
 		}
 		return nodeKleene{left}, nil
-	case tokens[main_op][0] == '[':
-		runes := []rune(tokens[main_op])
+	case tokens[mainOp][0] == '[':
+		runes := []rune(tokens[mainOp])
 		return nodeSet{runes[1 : len(runes)-1]}, nil
-	case tokens[main_op][0] == '{':
+	case tokens[mainOp][0] == '{':
 		var val int
-		_, err := fmt.Sscanf(tokens[main_op], "{%d}", &val)
+		_, err := fmt.Sscanf(tokens[mainOp], "{%d}", &val)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing inside {} at pos %d", r.from)
 		}
-		left, err := nodeFromTokens(tokens, rng{r.from, main_op - 1})
+		left, err := nodeFromTokens(tokens, rng{r.from, mainOp - 1})
 		if err != nil {
 			return nil, err
 		}
 		return nodeRepeat{child: left, number: val}, nil
-	case tokens[main_op] == "(:":
-		closeIdx, err := findMatchingParen(tokens, main_op, r.to)
+	case tokens[mainOp] == "(:":
+		closeIdx, err := findMatchingParen(tokens, mainOp, r.to)
 		if err != nil {
 			return nil, err
 		}
-		inner, err := nodeFromTokens(tokens, rng{main_op + 1, closeIdx - 1})
+		inner, err := nodeFromTokens(tokens, rng{mainOp + 1, closeIdx - 1})
 		if err != nil {
 			return nil, err
 		}
 		return inner, nil
 
-	case len(tokens[main_op]) >= 2 && tokens[main_op][0] == '(' && tokens[main_op][1] != ':':
+	case len(tokens[mainOp]) >= 2 && tokens[mainOp][0] == '(' && tokens[mainOp][1] != ':':
 		var capNum int
-		_, err := fmt.Sscanf(tokens[main_op], "(%d)", &capNum)
+		_, err := fmt.Sscanf(tokens[mainOp], "(%d)", &capNum)
 		if err != nil {
-			return nil, fmt.Errorf("invalid capture group token %q", tokens[main_op])
+			return nil, fmt.Errorf("invalid capture group token %q", tokens[mainOp])
 		}
-		closeIdx, err := findMatchingParen(tokens, main_op, r.to)
+		closeIdx, err := findMatchingParen(tokens, mainOp, r.to)
 		if err != nil {
 			return nil, err
 		}
-		child, err := nodeFromTokens(tokens, rng{main_op + 1, closeIdx - 1})
+		child, err := nodeFromTokens(tokens, rng{mainOp + 1, closeIdx - 1})
 		if err != nil {
 			return nil, err
 		}
 		return nodeGroup{child: child, index: capNum}, nil
-	case tokens[main_op][0] == '\\':
-		if '1' <= tokens[main_op][1] && tokens[main_op][1] <= '9' {
+	case tokens[mainOp][0] == '\\':
+		if '0' <= tokens[mainOp][1] && tokens[mainOp][1] <= '9' {
 			var val int
-			_, err = fmt.Sscanf(tokens[main_op], "\\%d", &val)
+			_, err = fmt.Sscanf(tokens[mainOp], "\\%d", &val)
 			if err != nil {
 				return nil, fmt.Errorf("couldn't get capture group expr index at pos %d", r.from)
 			}
 			return nodeGroupRef{val}, nil
 		}
+		if len(tokens[mainOp]) == 2 {
+			return nodeLiteral{[]rune(tokens[mainOp])[1]}, nil
+		}
 	case r.to == r.from:
-		return nodeLiteral{[]rune(tokens[main_op])[0]}, nil
+		return nodeLiteral{[]rune(tokens[mainOp])[0]}, nil
 	default:
-		return nil, fmt.Errorf("unknown operator '%s'", tokens[main_op])
+		return nil, fmt.Errorf("unknown operator '%s'", tokens[mainOp])
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("AST build error")
 }
 func findMatchingParen(tokens []string, start int, end int) (int, error) {
 	depth := 1

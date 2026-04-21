@@ -31,11 +31,15 @@ func Compile(pattern string) (Regex, error) {
 	if err != nil {
 		return nil, err
 	}
+	var regex Regex
 	if ast.hasGroups() {
-
+		regex, err = buildNfa(ast)
 	} else {
-
+		regex, err = buildDfa(ast)
+	}
+	if err != nil {
+		return nil, err
 	}
 	//todo
-	return nil, nil
+	return regex, nil
 }
