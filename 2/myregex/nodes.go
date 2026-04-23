@@ -2,8 +2,10 @@ package myregex
 
 type node interface {
 	children() (node, node)
-
 	reverse() node
+	fillNullable(*map[node]*nodeData)
+	fillFirst(*map[node]*nodeData)
+	fillLast(*map[node]*nodeData)
 }
 
 type nodeLiteral struct {
@@ -123,4 +125,15 @@ func hasGroups(n node) bool {
 	left, right := n.children()
 	return hasGroups(left) || hasGroups(right)
 
+}
+
+type nodeEnd struct {
+}
+
+func (n nodeEnd) children() (node, node) {
+	return nil, nil
+}
+
+func (n nodeEnd) reverse() node {
+	return n
 }
