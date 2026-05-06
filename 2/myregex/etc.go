@@ -6,6 +6,25 @@ import (
 	"strconv"
 )
 
+func unionMaps(a, b map[int]struct{}) map[int]struct{} {
+	result := make(map[int]struct{}, len(a)+len(b))
+	for k := range a {
+		result[k] = struct{}{}
+	}
+	for k := range b {
+		result[k] = struct{}{}
+	}
+	return result
+}
+
+func copyMap(a map[int]struct{}) map[int]struct{} {
+	result := make(map[int]struct{}, len(a))
+	for k := range a {
+		result[k] = struct{}{}
+	}
+	return result
+}
+
 func (a ast) WriteDot(filename string) error {
 	f, err := os.Create(filename)
 	if err != nil {

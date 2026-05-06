@@ -158,7 +158,7 @@ func (n *nodeSet) buildIndex(i *[]node) {
 	*i = append(*i, n)
 }
 func (n *nodeEpsilon) buildIndex(i *[]node) {
-	*i = append(*i, n)
+	//*i = append(*i, n)
 }
 func (n *nodeEnd) buildIndex(i *[]node) {
 	*i = append(*i, n)

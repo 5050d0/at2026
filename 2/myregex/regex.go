@@ -14,6 +14,7 @@ func (r RegexResult) GroupsCount() int {
 
 type Regex interface {
 	FindAll(input string) ([]RegexResult, error)
+	Match(input string) (bool, error)
 	//FindAllIter(input string) Iterator
 }
 type RegexDfa interface {
@@ -24,7 +25,6 @@ type RegexDfa interface {
 }
 
 type nfa struct{}
-type dfa struct{}
 
 func Compile(pattern string) (Regex, error) {
 	ast, err := buildAst(pattern)

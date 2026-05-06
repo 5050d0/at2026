@@ -2,10 +2,15 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"myregex"
 )
 
 func main() {
 	//fmt.Println(myregex.Compile("௸௸௸a\\|"))
-	fmt.Println(myregex.Compile("[abc]{4}"))
+	r, err := myregex.Compile("a|$bc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(r.Match("bc"))
 }

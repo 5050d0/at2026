@@ -110,7 +110,7 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		return nil, err
 	}
 	switch {
-	case tokens[mainOp] == "|": // todo добавить epsilon
+	case tokens[mainOp] == "|": // todo добавить ощибки при операндаъ
 		left, err := nodeFromTokens(tokens, rng{r.from, mainOp - 1})
 		if err != nil {
 			return nil, err
@@ -120,6 +120,8 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 			return nil, err
 		}
 		return &nodeOr{left, right}, nil
+	case tokens[mainOp] == "$":
+		return &nodeEpsilon{}, nil
 	case tokens[mainOp] == "concat":
 		left, err := nodeFromTokens(tokens, rng{r.from, mainOp - 1})
 		if err != nil {
@@ -134,6 +136,9 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		left, err := nodeFromTokens(tokens, rng{r.from, mainOp - 1})
 		if err != nil {
 			return nil, err
+		}
+		if left == nil {
+			return nil, fmt.Errorf("kleene operator with no operand")
 		}
 		return &nodeKleene{left}, nil
 	case tokens[mainOp][0] == '[':

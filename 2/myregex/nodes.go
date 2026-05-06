@@ -7,10 +7,15 @@ type node interface {
 	fillFirst(*map[node]*nodeData)
 	fillLast(*map[node]*nodeData)
 	buildIndex(i *[]node)
+	copy() node
 }
 
 type nodeLiteral struct {
 	value rune
+}
+
+func (n *nodeLiteral) copy() node {
+	return &nodeLiteral{n.value}
 }
 
 func (n *nodeLiteral) children() (node, node) {
@@ -25,6 +30,10 @@ type nodeOr struct {
 	left, right node
 }
 
+func (n *nodeOr) copy() node {
+	return &nodeOr{n.left.copy(), n.right.copy()}
+}
+
 func (n *nodeOr) children() (node, node) {
 	return n.left, n.right
 }
@@ -35,6 +44,10 @@ func (n *nodeOr) reverse() node {
 
 type nodeAnd struct {
 	left, right node
+}
+
+func (n *nodeAnd) copy() node {
+	return &nodeAnd{n.left.copy(), n.right.copy()}
 }
 
 func (n *nodeAnd) children() (node, node) {
@@ -49,6 +62,10 @@ type nodeKleene struct {
 	child node
 }
 
+func (n *nodeKleene) copy() node {
+	return &nodeKleene{n.child.copy()}
+}
+
 func (n *nodeKleene) children() (node, node) {
 	return n.child, nil
 }
@@ -59,6 +76,10 @@ func (n *nodeKleene) reverse() node {
 
 type nodeSet struct {
 	values []rune
+}
+
+func (n *nodeSet) copy() node {
+	return &nodeSet{n.values}
 }
 
 func (n *nodeSet) children() (node, node) {
@@ -74,6 +95,10 @@ type nodeRepeat struct {
 	number int
 }
 
+func (n *nodeRepeat) copy() node {
+	return &nodeRepeat{number: n.number, child: n.child.copy()}
+}
+
 func (n *nodeRepeat) children() (node, node) {
 	return n.child, nil
 }
@@ -85,6 +110,10 @@ func (n *nodeRepeat) reverse() node {
 type nodeGroup struct {
 	index int
 	child node
+}
+
+func (n *nodeGroup) copy() node {
+	return &nodeGroup{index: n.index, child: n.child.copy()}
 }
 
 func (n *nodeGroup) children() (node, node) {
@@ -99,6 +128,10 @@ type nodeGroupRef struct {
 	index int
 }
 
+func (n *nodeGroupRef) copy() node {
+	return &nodeGroupRef{n.index}
+}
+
 func (n *nodeGroupRef) children() (node, node) {
 	return nil, nil
 }
@@ -108,6 +141,10 @@ func (n *nodeGroupRef) reverse() node {
 }
 
 type nodeEpsilon struct {
+}
+
+func (n *nodeEpsilon) copy() node {
+	return &nodeEpsilon{}
 }
 
 func (n *nodeEpsilon) children() (node, node) { return nil, nil }
@@ -129,6 +166,10 @@ func hasGroups(n node) bool {
 }
 
 type nodeEnd struct {
+}
+
+func (n *nodeEnd) copy() node {
+	return &nodeEnd{}
 }
 
 func (n *nodeEnd) children() (node, node) {
