@@ -84,6 +84,46 @@ func buildDfa(tree ast) (Regex, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(nfl)
-	return nil, fmt.Errorf("DFA build error")
+	followpos := buildFollowpos(tree.root, nfl)
+	fmt.Println(followpos)
+
+	return nil, fmt.Errorf("DFA build not yet implemented")
+}
+
+func buildFollowpos(n node, nfl map[node]*nodeData) map[int]map[int]struct{} {
+	followpos := make(map[int]map[int]struct{})
+	fillFollowpos(n, nfl, followpos)
+	return followpos
+}
+
+func fillFollowpos(n node, nfl map[node]*nodeData, followpos map[int]map[int]struct{}) {
+	if n == nil {
+		return
+	}
+	switch v := n.(type) {
+	case *nodeAnd:
+		fillFollowpos(v.left, nfl, followpos)
+		fillFollowpos(v.right, nfl, followpos)
+		for i := range nfl[v.left].last {
+			if followpos[i] == nil {
+				followpos[i] = map[int]struct{}{}
+			}
+			for j := range nfl[v.right].first {
+				followpos[i][j] = struct{}{}
+			}
+		}
+	case *nodeKleene:
+		fillFollowpos(v.child, nfl, followpos)
+		for i := range nfl[n].last {
+			if followpos[i] == nil {
+				followpos[i] = map[int]struct{}{}
+			}
+			for j := range nfl[n].first {
+				followpos[i][j] = struct{}{}
+			}
+		}
+	case *nodeOr:
+		fillFollowpos(v.left, nfl, followpos)
+		fillFollowpos(v.right, nfl, followpos)
+	}
 }
