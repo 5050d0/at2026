@@ -30,7 +30,7 @@ func (a ast) WriteDot(filename string) error {
 		var children []node
 
 		switch v := n.(type) {
-		case nodeLiteral:
+		case *nodeLiteral:
 			ch := v.value
 			switch ch {
 			case '\\':
@@ -45,24 +45,24 @@ func (a ast) WriteDot(filename string) error {
 				label = string(ch)
 			}
 			label = fmt.Sprintf("'%s'", label)
-		case nodeOr:
+		case *nodeOr:
 			label = "|"
 			children = []node{v.left, v.right}
-		case nodeAnd:
+		case *nodeAnd:
 			label = "concat"
 			children = []node{v.left, v.right}
-		case nodeKleene:
+		case *nodeKleene:
 			label = "..."
 			children = []node{v.child}
-		case nodeSet:
+		case *nodeSet:
 			label = fmt.Sprintf("[%s]", string(v.values))
-		case nodeRepeat:
+		case *nodeRepeat:
 			label = fmt.Sprintf("{%d}", v.number)
 			children = []node{v.child}
-		case nodeGroup:
+		case *nodeGroup:
 			label = fmt.Sprintf("group #%d", v.index)
 			children = []node{v.child}
-		case nodeGroupRef:
+		case *nodeGroupRef:
 			label = fmt.Sprintf("\\%d", v.index)
 		default:
 			label = "unknown"

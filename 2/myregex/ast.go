@@ -110,7 +110,7 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		return nil, err
 	}
 	switch {
-	case tokens[mainOp] == "|":
+	case tokens[mainOp] == "|": // todo добавить epsilon
 		left, err := nodeFromTokens(tokens, rng{r.from, mainOp - 1})
 		if err != nil {
 			return nil, err
@@ -119,7 +119,7 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		if err != nil {
 			return nil, err
 		}
-		return nodeOr{left, right}, nil
+		return &nodeOr{left, right}, nil
 	case tokens[mainOp] == "concat":
 		left, err := nodeFromTokens(tokens, rng{r.from, mainOp - 1})
 		if err != nil {
@@ -129,16 +129,16 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		if err != nil {
 			return nil, err
 		}
-		return nodeAnd{left, right}, nil
+		return &nodeAnd{left, right}, nil
 	case tokens[mainOp] == "...":
 		left, err := nodeFromTokens(tokens, rng{r.from, mainOp - 1})
 		if err != nil {
 			return nil, err
 		}
-		return nodeKleene{left}, nil
+		return &nodeKleene{left}, nil
 	case tokens[mainOp][0] == '[':
 		runes := []rune(tokens[mainOp])
-		return nodeSet{runes[1 : len(runes)-1]}, nil
+		return &nodeSet{runes[1 : len(runes)-1]}, nil
 	case tokens[mainOp][0] == '{':
 		var val int
 		_, err := fmt.Sscanf(tokens[mainOp], "{%d}", &val)
@@ -149,7 +149,7 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		if err != nil {
 			return nil, err
 		}
-		return nodeRepeat{child: left, number: val}, nil
+		return &nodeRepeat{child: left, number: val}, nil
 	case tokens[mainOp] == "(:":
 		closeIdx, err := findMatchingParen(tokens, mainOp, r.to)
 		if err != nil {
@@ -175,7 +175,7 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		if err != nil {
 			return nil, err
 		}
-		return nodeGroup{child: child, index: capNum}, nil
+		return &nodeGroup{child: child, index: capNum}, nil
 	case tokens[mainOp][0] == '\\':
 		if '0' <= tokens[mainOp][1] && tokens[mainOp][1] <= '9' {
 			var val int
@@ -183,13 +183,13 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 			if err != nil {
 				return nil, fmt.Errorf("couldn't get capture group expr index at pos %d", r.from)
 			}
-			return nodeGroupRef{val}, nil
+			return &nodeGroupRef{val}, nil
 		}
 		if len(tokens[mainOp]) == 2 {
-			return nodeLiteral{[]rune(tokens[mainOp])[1]}, nil
+			return &nodeLiteral{[]rune(tokens[mainOp])[1]}, nil
 		}
 	case r.to == r.from:
-		return nodeLiteral{[]rune(tokens[mainOp])[0]}, nil
+		return &nodeLiteral{[]rune(tokens[mainOp])[0]}, nil
 	default:
 		return nil, fmt.Errorf("unknown operator '%s'", tokens[mainOp])
 	}
