@@ -105,7 +105,7 @@ type dfaState struct {
 
 type DFA struct {
 	startState int
-	states     map[int]*dfaState
+	states     []*dfaState
 }
 
 func hashSet(pos map[int]struct{}) string {
@@ -139,17 +139,9 @@ func buildDfa(tree ast) (RegexDfa, error) {
 		return nil, err
 	}
 	followpos := buildFollowpos(tree.root, nfl)
-	var endPos int
-	for i, n := range index {
-		if _, ok := n.(*nodeEnd); ok {
-			endPos = i
-			break
-		}
-	}
+	endPos := len(index) - 1
 
-	dfa := &DFA{
-		states: make(map[int]*dfaState),
-	}
+	dfa := &DFA{}
 
 	stateMap := make(map[string]int)
 
@@ -164,7 +156,7 @@ func buildDfa(tree ast) (RegexDfa, error) {
 	}
 
 	dfa.startState = 0
-	dfa.states[0] = startState
+	dfa.states = append(dfa.states, startState)
 	stateMap[startHash] = 0
 
 	queue := make([]int, 1)
@@ -173,7 +165,7 @@ func buildDfa(tree ast) (RegexDfa, error) {
 		queue = queue[1:]
 		currState := dfa.states[currID]
 
-		if _, hasEnd := currState.positions[endPos]; hasEnd {
+		if _, found := currState.positions[endPos]; found {
 			currState.isAccept = true
 		}
 
@@ -200,10 +192,6 @@ func buildDfa(tree ast) (RegexDfa, error) {
 				}
 			}
 
-			if len(nextPos) == 0 {
-				continue
-			}
-
 			nextHash := hashSet(nextPos)
 			nextID, exists := stateMap[nextHash]
 
@@ -214,7 +202,7 @@ func buildDfa(tree ast) (RegexDfa, error) {
 					positions:   nextPos,
 					transitions: make(map[rune]int),
 				}
-				dfa.states[nextID] = newState
+				dfa.states = append(dfa.states, newState)
 				stateMap[nextHash] = nextID
 				queue = append(queue, nextID)
 			}
@@ -227,8 +215,39 @@ func buildDfa(tree ast) (RegexDfa, error) {
 }
 
 func (d *DFA) FindAll(input string) ([]RegexResult, error) {
-	//TODO implement me
-	panic("implement me")
+	runes := []rune(input)
+	var results []RegexResult
+	i := 0
+
+	for i < len(runes) {
+		currentStateID := d.startState
+		lastAcceptEnd := -1
+		j := i
+
+		for j < len(runes) {
+			nextStateID, ok := d.states[currentStateID].transitions[runes[j]]
+			if !ok {
+				break
+			}
+			currentStateID = nextStateID
+			j++
+			if d.states[currentStateID].isAccept {
+				lastAcceptEnd = j
+			}
+		}
+
+		if lastAcceptEnd == -1 {
+			i++
+		} else {
+			results = append(results, RegexResult{
+				Match:  string(runes[i:lastAcceptEnd]),
+				Groups: []string{},
+			})
+			i = lastAcceptEnd
+		}
+	}
+
+	return results, nil
 }
 func (d *DFA) Match(input string) (bool, error) {
 	currentStateID := d.startState
@@ -236,8 +255,8 @@ func (d *DFA) Match(input string) (bool, error) {
 	for _, char := range input {
 		currentState := d.states[currentStateID]
 
-		nextStateID, ok := currentState.transitions[char]
-		if !ok {
+		nextStateID, found := currentState.transitions[char]
+		if !found {
 			return false, nil
 		}
 

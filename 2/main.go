@@ -8,9 +8,9 @@ import (
 
 func main() {
 	//fmt.Println(myregex.Compile("௸௸௸a\\|"))
-	r, err := myregex.Compile("a|$bc")
+	r, err := myregex.Compile("a...")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(r.Match("bc"))
+	fmt.Println(r.Match(""))
 }
