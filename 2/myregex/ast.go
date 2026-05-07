@@ -103,7 +103,7 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		return nil, fmt.Errorf("empty token")
 	}
 	if r.from > r.to {
-		return nil, nil
+		return nil, fmt.Errorf("token out of range")
 	}
 	mainOp, err := findMainOp(tokens, r)
 	if err != nil {
@@ -119,6 +119,9 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		if err != nil {
 			return nil, err
 		}
+		if left == nil || right == nil {
+			return nil, fmt.Errorf("or operator with no operand")
+		}
 		return &nodeOr{left, right}, nil
 	case tokens[mainOp] == "$":
 		return &nodeEpsilon{}, nil
@@ -130,6 +133,9 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		right, err := nodeFromTokens(tokens, rng{mainOp + 1, r.to})
 		if err != nil {
 			return nil, err
+		}
+		if left == nil || right == nil {
+			return nil, fmt.Errorf("and operator with no operand")
 		}
 		return &nodeAnd{left, right}, nil
 	case tokens[mainOp] == "...":
@@ -143,6 +149,9 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		return &nodeKleene{left}, nil
 	case tokens[mainOp][0] == '[':
 		runes := []rune(tokens[mainOp])
+		if len(runes) < 2 {
+			return nil, fmt.Errorf("empty set operator")
+		}
 		return &nodeSet{runes[1 : len(runes)-1]}, nil
 	case tokens[mainOp][0] == '{':
 		var val int
@@ -154,6 +163,9 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		if err != nil {
 			return nil, err
 		}
+		if left == nil {
+			return nil, fmt.Errorf("repeat operator with no operand")
+		}
 		return &nodeRepeat{child: left, number: val}, nil
 	case tokens[mainOp] == "(:":
 		closeIdx, err := findMatchingParen(tokens, mainOp, r.to)
@@ -163,6 +175,9 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		inner, err := nodeFromTokens(tokens, rng{mainOp + 1, closeIdx - 1})
 		if err != nil {
 			return nil, err
+		}
+		if inner == nil {
+			return nil, fmt.Errorf("bracket operator with no operand")
 		}
 		return inner, nil
 
@@ -179,6 +194,9 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		child, err := nodeFromTokens(tokens, rng{mainOp + 1, closeIdx - 1})
 		if err != nil {
 			return nil, err
+		}
+		if child == nil {
+			return nil, fmt.Errorf("group operator with no operand")
 		}
 		return &nodeGroup{child: child, index: capNum}, nil
 	case tokens[mainOp][0] == '\\':

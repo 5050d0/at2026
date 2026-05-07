@@ -90,8 +90,8 @@ func TestDFA_Match(t *testing.T) {
 		{"complex no match", "(:ab|cd)...ef", "abcd", false},
 
 		// escaping metachars
-		{"escaped pipe", "a[|]b", "a|b", true},
-		{"escaped dot literal", "a[.]b", "a.b", true},
+		{"escaped pipe", "a\\|b", "a|b", true},
+		{"escaped dot literal", "a\\...b", "a...b", true},
 
 		// unicode
 		{"unicode match", "привет", "привет", true},
@@ -189,4 +189,288 @@ func TestDFA_FindAll(t *testing.T) {
 			}
 		})
 	}
+}
+
+func mustReverse(t *testing.T, pattern string) Regex {
+	t.Helper()
+	dfa := mustBuildDfa(t, pattern)
+	rev, err := dfa.Reverse()
+	if err != nil {
+		t.Fatalf("Reverse() on pattern %q error: %v", pattern, err)
+	}
+	return rev
+}
+
+func matchRev(t *testing.T, rev Regex, input string) bool {
+	t.Helper()
+	ok, err := rev.Match(input)
+	if err != nil {
+		t.Fatalf("Match(%q) on reversed regex error: %v", input, err)
+	}
+	return ok
+}
+
+// ── Match on reversed DFA ────────────────────────────────────────────────────
+
+func TestDFA_Reverse_Match(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string // original pattern
+		input   string // input to feed to the REVERSED regex
+		want    bool
+	}{
+		// single character — reverse of one char is itself
+		{"single char match", "a", "a", true},
+		{"single char no match", "a", "b", false},
+
+		// literal reversal
+		{"literal reversed", "abc", "cba", true},
+		{"literal not reversed", "abc", "abc", false},
+		{"literal partial", "abc", "cb", false},
+		{"literal extra", "abc", "dcba", false},
+
+		// two char swap
+		{"two chars reversed", "ab", "ba", true},
+		{"two chars not swapped", "ab", "ab", false},
+
+		// palindromes — reverse equals original
+		{"palindrome 1", "aba", "aba", true},
+		{"palindrome 2", "abba", "abba", true},
+		{"palindrome single", "a", "a", true},
+
+		// epsilon — reverse of empty is empty
+		{"epsilon match", "$", "", true},
+		{"epsilon no match", "$", "a", false},
+
+		// kleene — reverse of a* is a*
+		{"kleene empty", "a...", "", true},
+		{"kleene one", "a...", "a", true},
+		{"kleene many", "a...", "aaaa", true},
+		{"kleene wrong char", "a...", "b", false},
+
+		// kleene with concat — (ab)* reversed is (ba)*
+		{"concat kleene empty", "(:ab)...", "", true},
+		{"concat kleene one", "(:ab)...", "ba", true},
+		{"concat kleene two", "(:ab)...", "baba", true},
+		{"concat kleene not reversed", "(:ab)...", "ab", false},
+		{"concat kleene partial", "(:ab)...", "bab", false},
+
+		// or — reverse of (a|b) is (a|b), reverse of (ab|cd) is (ba|dc)
+		{"or single chars", "a|b", "a", true},
+		{"or single chars right", "a|b", "b", true},
+		{"or single chars neither", "a|b", "c", false},
+		{"or words reversed left", "cat|dog", "tac", true},
+		{"or words reversed right", "cat|dog", "god", true},
+		{"or words not reversed", "cat|dog", "cat", false},
+		{"or words not reversed right", "cat|dog", "dog", false},
+
+		// character set — [abc] reversed is still [abc] (single char)
+		{"set match", "[abc]", "a", true},
+		{"set match b", "[abc]", "b", true},
+		{"set no match", "[abc]", "d", false},
+
+		// repeat — reverse of a{3} is a{3} (same chars)
+		{"repeat same", "a{3}", "aaa", true},
+		{"repeat too few", "a{3}", "aa", false},
+		{"repeat too many", "a{3}", "aaaa", false},
+
+		// repeat of word — reverse of (ab){3} is (ba){3}
+		{"repeat word reversed", "(:ab){3}", "bababa", true},
+		{"repeat word not reversed", "(:ab){3}", "ababab", false},
+
+		// longer concat reversal
+		{"long literal", "abcde", "edcba", true},
+		{"long literal wrong order", "abcde", "abcde", false},
+
+		// mixed: concat + or
+		{"concat or reversed", "(:a|b)c", "ca", true},
+		{"concat or reversed b", "(:a|b)c", "cb", true},
+		{"concat or not reversed", "(:a|b)c", "ac", false},
+
+		// double reverse cancels out: rev(rev(L)) = L
+		{"double reverse abc match", "abc", "abc", false}, // rev matches "cba", not "abc"
+		{"double reverse cba match", "abc", "cba", true},
+
+		// unicode
+		{"unicode reversed", "привет", "тевирп", true},
+		{"unicode not reversed", "привет", "привет", false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rev := mustReverse(t, tc.pattern)
+			got := matchRev(t, rev, tc.input)
+			if got != tc.want {
+				t.Errorf("Reverse(%q).Match(%q) = %v, want %v",
+					tc.pattern, tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+// ── Double reverse ────────────────────────────────────────────────────────────
+// Reversing twice must produce a regex equivalent to the original.
+
+func TestDFA_Reverse_DoubleReverse(t *testing.T) {
+	patterns := []struct {
+		pattern string
+		accept  []string
+		reject  []string
+	}{
+		{"abc", []string{"abc"}, []string{"cba", "ab", ""}},
+		{"a...", []string{"", "a", "aaa"}, []string{"b", "ab"}},
+		{"a|b", []string{"a", "b"}, []string{"c", "ab"}},
+		{"(:ab)...", []string{"", "ab", "abab"}, []string{"ba", "a"}},
+		{"[abc]", []string{"a", "b", "c"}, []string{"d", "ab"}},
+		{"a{3}", []string{"aaa"}, []string{"aa", "aaaa"}},
+	}
+
+	for _, tc := range patterns {
+		t.Run(tc.pattern, func(t *testing.T) {
+			dfa := mustBuildDfa(t, tc.pattern)
+
+			rev1, err := dfa.Reverse()
+			if err != nil {
+				t.Fatalf("first Reverse() error: %v", err)
+			}
+			rev1Dfa, ok := rev1.(*DFA)
+			if !ok {
+				t.Fatal("Reverse() did not return a *DFA")
+			}
+			rev2, err := rev1Dfa.Reverse()
+			if err != nil {
+				t.Fatalf("second Reverse() error: %v", err)
+			}
+
+			for _, s := range tc.accept {
+				got, err := rev2.Match(s)
+				if err != nil {
+					t.Fatalf("double-reverse Match(%q) error: %v", s, err)
+				}
+				if !got {
+					t.Errorf("double-reverse of %q should accept %q", tc.pattern, s)
+				}
+			}
+			for _, s := range tc.reject {
+				got, err := rev2.Match(s)
+				if err != nil {
+					t.Fatalf("double-reverse Match(%q) error: %v", s, err)
+				}
+				if got {
+					t.Errorf("double-reverse of %q should reject %q", tc.pattern, s)
+				}
+			}
+		})
+	}
+}
+
+// ── FindAll on reversed DFA ───────────────────────────────────────────────────
+
+func TestDFA_Reverse_FindAll(t *testing.T) {
+	tests := []struct {
+		name    string
+		pattern string
+		input   string
+		want    []string
+	}{
+		// reverse of "ab" matches "ba"
+		{"find ba in string", "ab", "xbayba", []string{"ba", "ba"}},
+		{"find reversed word", "cat", "I saw tactac", []string{"tac", "tac"}},
+
+		// reverse of a* is a* — finds runs of a's greedily
+		{"kleene finds runs", "a...", "aaabaa", []string{"aaa", "aa"}},
+
+		// reverse of (ab|cd) matches ba or dc
+		{"or reversed findall", "ab|cd", "xbadcx", []string{"ba", "dc"}},
+
+		// reverse of single char is itself
+		{"single char findall", "x", "axbxcx", []string{"x", "x", "x"}},
+
+		// no matches
+		{"no match", "abc", "abc", nil}, // rev matches "cba", not "abc"
+
+		// unicode
+		{"unicode findall", "кот", "токкоттоккот", []string{"ток", "ток"}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rev := mustReverse(t, tc.pattern)
+			results, err := rev.FindAll(tc.input)
+			if err != nil {
+				t.Fatalf("FindAll(%q) error: %v", tc.input, err)
+			}
+
+			got := make([]string, len(results))
+			for i, r := range results {
+				got[i] = r.Match
+			}
+
+			if len(got) != len(tc.want) {
+				t.Errorf("Reverse(%q).FindAll(%q)\n  got  %v\n  want %v",
+					tc.pattern, tc.input, got, tc.want)
+				return
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Errorf("match[%d]: got %q want %q", i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
+// ── Edge cases ────────────────────────────────────────────────────────────────
+
+func TestDFA_Reverse_EdgeCases(t *testing.T) {
+	t.Run("reverse returns non-nil", func(t *testing.T) {
+		dfa := mustBuildDfa(t, "abc")
+		rev, err := dfa.Reverse()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if rev == nil {
+			t.Fatal("Reverse() returned nil")
+		}
+	})
+
+	t.Run("reverse of epsilon is epsilon", func(t *testing.T) {
+		rev := mustReverse(t, "$")
+		if !matchRev(t, rev, "") {
+			t.Error("reverse of epsilon should match empty string")
+		}
+		if matchRev(t, rev, "a") {
+			t.Error("reverse of epsilon should not match non-empty string")
+		}
+	})
+
+	t.Run("reverse of single char is idempotent", func(t *testing.T) {
+		rev := mustReverse(t, "a")
+		if !matchRev(t, rev, "a") {
+			t.Error("reverse of 'a' should still match 'a'")
+		}
+	})
+
+	t.Run("reverse does not mutate original dfa", func(t *testing.T) {
+		dfa := mustBuildDfa(t, "abc")
+		_, err := dfa.Reverse()
+		if err != nil {
+			t.Fatalf("Reverse() error: %v", err)
+		}
+		// original must still work correctly after Reverse() is called
+		ok, err := dfa.Match("abc")
+		if err != nil {
+			t.Fatalf("Match after Reverse() error: %v", err)
+		}
+		if !ok {
+			t.Error("original DFA was mutated by Reverse()")
+		}
+		ok, err = dfa.Match("cba")
+		if err != nil {
+			t.Fatalf("Match after Reverse() error: %v", err)
+		}
+		if ok {
+			t.Error("original DFA was mutated to accept reversed strings")
+		}
+	})
 }

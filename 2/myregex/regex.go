@@ -20,7 +20,7 @@ type Regex interface {
 type RegexDfa interface {
 	Regex
 	RebuildString() (string, error)
-	Invert() (Regex, error)
+	Reverse() (Regex, error)
 	Complement() (Regex, error)
 }
 
@@ -33,7 +33,7 @@ func Compile(pattern string) (Regex, error) {
 	}
 	var regex Regex
 	if ast.hasGroups() {
-		regex, err = buildNfa(ast)
+		regex, err = buildNfa(ast, pattern)
 	} else {
 		regex, err = buildDfa(ast)
 	}

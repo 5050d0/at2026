@@ -104,6 +104,7 @@ type dfaState struct {
 }
 
 type DFA struct {
+	tree       ast
 	startState int
 	states     []*dfaState
 }
@@ -127,6 +128,7 @@ func hashSet(pos map[int]struct{}) string {
 }
 
 func buildDfa(tree ast) (RegexDfa, error) {
+	dfa := &DFA{tree: ast{tree.root.copy()}}
 	newRoot := nodeAnd{left: tree.root, right: &nodeEnd{}}
 	tree.root = &newRoot
 	tree.root = expandNodeRepeat(tree.root)
@@ -140,8 +142,6 @@ func buildDfa(tree ast) (RegexDfa, error) {
 	}
 	followpos := buildFollowpos(tree.root, nfl)
 	endPos := len(index) - 1
-
-	dfa := &DFA{}
 
 	stateMap := make(map[string]int)
 
@@ -271,9 +271,8 @@ func (d *DFA) RebuildString() (string, error) {
 	panic("implement me")
 }
 
-func (d *DFA) Invert() (Regex, error) {
-	//TODO implement me
-	panic("implement me")
+func (d *DFA) Reverse() (Regex, error) {
+	return buildDfa(ast{d.tree.root.reverse()})
 }
 
 func (d *DFA) Complement() (Regex, error) {
