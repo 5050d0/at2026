@@ -364,7 +364,6 @@ func buildAst(pattern string) (ast, error) {
 	tokens = concatenize(tokens)
 	tree := ast{}
 	tree.root, err = nodeFromTokens(tokens, rng{0, len(tokens) - 1})
-	//todo
-	_ = tree.WriteDot("tree.dot")
+	//_ = tree.WriteDot("tree.dot")
 	return tree, err
 }

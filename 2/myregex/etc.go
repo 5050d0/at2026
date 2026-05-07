@@ -3,7 +3,9 @@ package myregex
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 )
 
 func unionMaps(a, b map[int]struct{}) map[int]struct{} {
@@ -98,6 +100,93 @@ func (a ast) WriteDot(filename string) error {
 	}
 
 	traverse(a.root)
+	f.WriteString("}\n")
+	return nil
+}
+func (d *DFA) WriteDot(filename string) error {
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	f.WriteString("digraph DFA {\n")
+	f.WriteString("  node [fontname=\"monospace\"];\n")
+	f.WriteString("  rankdir=LR;\n\n")
+
+	// Invisible start arrow pointing to start state
+	f.WriteString("  __start [shape=point, width=0.2];\n")
+	fmt.Fprintf(f, "  __start -> %d;\n\n", d.startState)
+
+	// Emit each state node
+	for _, state := range d.states {
+		if state.isAccept {
+			fmt.Fprintf(f, "  %d [shape=doublecircle, label=%q];\n", state.id, strconv.Itoa(state.id))
+		} else {
+			fmt.Fprintf(f, "  %d [shape=circle, label=%q];\n", state.id, strconv.Itoa(state.id))
+		}
+	}
+
+	f.WriteString("\n")
+
+	// Collect and merge transitions: (from, to) -> []rune, so parallel edges
+	// get a single label like "a,b,c" instead of three separate arrows.
+	type edgeKey struct{ from, to int }
+	edgeLabels := make(map[edgeKey][]rune)
+
+	for _, state := range d.states {
+		// Sort runes for deterministic output
+		chars := make([]rune, 0, len(state.transitions))
+		for ch := range state.transitions {
+			chars = append(chars, ch)
+		}
+		sort.Slice(chars, func(i, j int) bool { return chars[i] < chars[j] })
+
+		for _, ch := range chars {
+			to := state.transitions[ch]
+			key := edgeKey{state.id, to}
+			edgeLabels[key] = append(edgeLabels[key], ch)
+		}
+	}
+
+	// Emit one edge per (from, to) pair with a combined label
+	type edge struct {
+		from, to int
+		chars    []rune
+	}
+	edges := make([]edge, 0, len(edgeLabels))
+	for k, chars := range edgeLabels {
+		edges = append(edges, edge{k.from, k.to, chars})
+	}
+	sort.Slice(edges, func(i, j int) bool {
+		if edges[i].from != edges[j].from {
+			return edges[i].from < edges[j].from
+		}
+		return edges[i].to < edges[j].to
+	})
+
+	for _, e := range edges {
+		var sb strings.Builder
+		for i, ch := range e.chars {
+			if i > 0 {
+				sb.WriteRune(',')
+			}
+			switch ch {
+			case '\\':
+				sb.WriteString(`\\`)
+			case '"':
+				sb.WriteString(`\"`)
+			case '\n':
+				sb.WriteString(`\n`)
+			case '\t':
+				sb.WriteString(`\t`)
+			default:
+				sb.WriteRune(ch)
+			}
+		}
+		fmt.Fprintf(f, "  %d -> %d [label=%q];\n", e.from, e.to, sb.String())
+	}
+
 	f.WriteString("}\n")
 	return nil
 }

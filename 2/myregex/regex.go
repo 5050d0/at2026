@@ -24,8 +24,6 @@ type RegexDfa interface {
 	Complement() (Regex, error)
 }
 
-type nfa struct{}
-
 func Compile(pattern string) (Regex, error) {
 	ast, err := buildAst(pattern)
 	if err != nil {
@@ -33,7 +31,7 @@ func Compile(pattern string) (Regex, error) {
 	}
 	var regex Regex
 	if ast.hasGroups() {
-		regex, err = buildNfa(ast, pattern)
+		regex, err = buildNfa(ast)
 	} else {
 		regex, err = buildDfa(ast)
 	}
