@@ -110,7 +110,7 @@ func nodeFromTokens(tokens []string, r rng) (node, error) {
 		return nil, err
 	}
 	switch {
-	case tokens[mainOp] == "|": // todo добавить ощибки при операндаъ
+	case tokens[mainOp] == "|":
 		left, err := nodeFromTokens(tokens, rng{r.from, mainOp - 1})
 		if err != nil {
 			return nil, err

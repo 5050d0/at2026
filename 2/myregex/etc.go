@@ -103,7 +103,7 @@ func (a ast) WriteDot(filename string) error {
 	f.WriteString("}\n")
 	return nil
 }
-func (d *DFA) WriteDot(filename string) error {
+func (dfa *DFA) WriteDot(filename string) error {
 	f, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -116,10 +116,10 @@ func (d *DFA) WriteDot(filename string) error {
 
 	// Invisible start arrow pointing to start state
 	f.WriteString("  __start [shape=point, width=0.2];\n")
-	fmt.Fprintf(f, "  __start -> %d;\n\n", d.startState)
+	fmt.Fprintf(f, "  __start -> %d;\n\n", dfa.startState)
 
 	// Emit each state node
-	for t, state := range d.states {
+	for t, state := range dfa.states {
 		if state.isAccept {
 			fmt.Fprintf(f, "  %d [shape=doublecircle, label=%q];\n", t, strconv.Itoa(t))
 		} else {
@@ -134,7 +134,7 @@ func (d *DFA) WriteDot(filename string) error {
 	type edgeKey struct{ from, to int }
 	edgeLabels := make(map[edgeKey][]rune)
 
-	for _, state := range d.states {
+	for _, state := range dfa.states {
 		// Sort runes for deterministic output
 		chars := make([]rune, 0, len(state.transitions))
 		for ch := range state.transitions {

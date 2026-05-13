@@ -212,24 +212,24 @@ func buildDfa(tree ast) (RegexDfa, error) {
 	return dfa, nil
 }
 
-func (d *DFA) FindAll(input string) ([]RegexResult, error) {
+func (dfa *DFA) FindAll(input string) ([]RegexResult, error) {
 	runes := []rune(input)
 	var results []RegexResult
 	i := 0
 
 	for i < len(runes) {
-		currentStateID := d.startState
+		currentStateID := dfa.startState
 		lastAcceptEnd := -1
 		j := i
 
 		for j < len(runes) {
-			nextStateID, ok := d.states[currentStateID].transitions[runes[j]]
+			nextStateID, ok := dfa.states[currentStateID].transitions[runes[j]]
 			if !ok {
 				break
 			}
 			currentStateID = nextStateID
 			j++
-			if d.states[currentStateID].isAccept {
+			if dfa.states[currentStateID].isAccept {
 				lastAcceptEnd = j
 			}
 		}
@@ -247,11 +247,11 @@ func (d *DFA) FindAll(input string) ([]RegexResult, error) {
 
 	return results, nil
 }
-func (d *DFA) Match(input string) (bool, error) {
-	currentStateID := d.startState
+func (dfa *DFA) Match(input string) (bool, error) {
+	currentStateID := dfa.startState
 
 	for _, char := range input {
-		currentState := d.states[currentStateID]
+		currentState := dfa.states[currentStateID]
 
 		nextStateID, found := currentState.transitions[char]
 		if !found {
@@ -261,16 +261,16 @@ func (d *DFA) Match(input string) (bool, error) {
 		currentStateID = nextStateID
 	}
 
-	return d.states[currentStateID].isAccept, nil
+	return dfa.states[currentStateID].isAccept, nil
 
 }
-func (d *DFA) RebuildString() (string, error) {
+func (dfa *DFA) RebuildString() (string, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (d *DFA) Reverse() (Regex, error) {
-	pattern, err := d.RebuildString()
+func (dfa *DFA) Reverse() (Regex, error) {
+	pattern, err := dfa.RebuildString()
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +282,7 @@ func (d *DFA) Reverse() (Regex, error) {
 	return buildDfa(ast)
 }
 
-func (d *DFA) Complement() (Regex, error) {
+func (dfa *DFA) Complement() (Regex, error) {
 	//TODO implement me
 	panic("implement me")
 }
