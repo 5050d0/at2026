@@ -97,14 +97,12 @@ func fillFollowpos(n node, nfl map[node]*nodeData, followpos map[int]map[int]str
 }
 
 type dfaState struct {
-	id          int
 	positions   map[int]struct{}
 	transitions map[rune]int
 	isAccept    bool
 }
 
 type DFA struct {
-	Tree       ast
 	startState int
 	states     []*dfaState
 }
@@ -128,7 +126,7 @@ func hashSet(pos map[int]struct{}) string {
 }
 
 func buildDfa(tree ast) (RegexDfa, error) {
-	dfa := &DFA{Tree: ast{tree.root.copy()}}
+	dfa := &DFA{}
 	newRoot := nodeAnd{left: tree.root, right: &nodeEnd{}}
 	tree.root = &newRoot
 	tree.root = expandNodeRepeat(tree.root)
@@ -149,7 +147,6 @@ func buildDfa(tree ast) (RegexDfa, error) {
 	startHash := hashSet(startPositions)
 
 	startState := &dfaState{
-		id:          0,
 		positions:   startPositions,
 		transitions: make(map[rune]int),
 		isAccept:    false,
@@ -198,7 +195,6 @@ func buildDfa(tree ast) (RegexDfa, error) {
 			if !exists {
 				nextID = len(dfa.states)
 				newState := &dfaState{
-					id:          nextID,
 					positions:   nextPos,
 					transitions: make(map[rune]int),
 				}
@@ -211,6 +207,8 @@ func buildDfa(tree ast) (RegexDfa, error) {
 		}
 	}
 	//dfa.WriteDot("dfa.dot")
+
+	dfa.Minimize()
 	return dfa, nil
 }
 
@@ -272,10 +270,23 @@ func (d *DFA) RebuildString() (string, error) {
 }
 
 func (d *DFA) Reverse() (Regex, error) {
-	return buildDfa(ast{d.Tree.root.reverse()})
+	pattern, err := d.RebuildString()
+	if err != nil {
+		return nil, err
+	}
+	ast, err := buildAst(pattern)
+	if err != nil {
+		return nil, err
+	}
+	ast.root = ast.root.reverse()
+	return buildDfa(ast)
 }
 
 func (d *DFA) Complement() (Regex, error) {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (dfa *DFA) Minimize() {
+	//todo
 }

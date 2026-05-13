@@ -119,11 +119,11 @@ func (d *DFA) WriteDot(filename string) error {
 	fmt.Fprintf(f, "  __start -> %d;\n\n", d.startState)
 
 	// Emit each state node
-	for _, state := range d.states {
+	for t, state := range d.states {
 		if state.isAccept {
-			fmt.Fprintf(f, "  %d [shape=doublecircle, label=%q];\n", state.id, strconv.Itoa(state.id))
+			fmt.Fprintf(f, "  %d [shape=doublecircle, label=%q];\n", t, strconv.Itoa(t))
 		} else {
-			fmt.Fprintf(f, "  %d [shape=circle, label=%q];\n", state.id, strconv.Itoa(state.id))
+			fmt.Fprintf(f, "  %d [shape=circle, label=%q];\n", t, strconv.Itoa(t))
 		}
 	}
 
@@ -142,9 +142,9 @@ func (d *DFA) WriteDot(filename string) error {
 		}
 		sort.Slice(chars, func(i, j int) bool { return chars[i] < chars[j] })
 
-		for _, ch := range chars {
+		for t, ch := range chars {
 			to := state.transitions[ch]
-			key := edgeKey{state.id, to}
+			key := edgeKey{t, to}
 			edgeLabels[key] = append(edgeLabels[key], ch)
 		}
 	}
