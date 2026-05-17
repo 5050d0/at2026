@@ -265,8 +265,134 @@ func (dfa *DFA) Match(input string) (bool, error) {
 
 }
 func (dfa *DFA) RebuildString() (string, error) {
-	//TODO implement me
-	panic("implement me")
+	const (
+		stateBegin = -1
+		stateEnd   = -2
+	)
+
+	transitions := make(map[int]map[int]string)
+
+	merge := func(from, to int, r string) {
+		if r == "" {
+			return
+		}
+		if transitions[from] == nil {
+			transitions[from] = make(map[int]string)
+		}
+		cur := transitions[from][to]
+		if cur == "" || cur == r {
+			transitions[from][to] = r
+		} else {
+			transitions[from][to] = cur + "|" + r
+		}
+	}
+
+	wrap := func(r string) string {
+		depth := 0
+		for _, ch := range r {
+			switch ch {
+			case '(':
+				depth++
+			case ')':
+				depth--
+			case '|':
+				if depth == 0 {
+					return "(:" + r + ")"
+				}
+			}
+		}
+		return r
+	}
+
+	concat := func(a, b string) string {
+		switch {
+		case a == "" || b == "":
+			return ""
+		case a == "$":
+			return b
+		case b == "$":
+			return a
+		default:
+			return wrap(a) + wrap(b)
+		}
+	}
+
+	kleene := func(r string) string {
+		switch {
+		case r == "" || r == "$":
+			return "$"
+		case len([]rune(r)) == 1:
+			return r + "..."
+		default:
+			return "(:" + r + ")..."
+		}
+	}
+
+	merge(stateBegin, dfa.startState, "$")
+	for i, s := range dfa.states {
+		if s.isAccept {
+			merge(i, stateEnd, "$")
+		}
+	}
+
+	type edge struct{ from, to int }
+	edgeTransitions := make(map[edge][]string)
+	for i, s := range dfa.states {
+		for ch, j := range s.transitions {
+			k := edge{i, j}
+			edgeTransitions[k] = append(edgeTransitions[k], string(ch))
+		}
+	}
+	for k, syms := range edgeTransitions {
+		label := strings.Join(syms, "")
+		if len(syms) > 1 {
+			label = "[" + label + "]"
+		}
+		merge(k.from, k.to, label)
+	}
+
+	remaining := make(map[int]struct{})
+	remaining[stateBegin] = struct{}{}
+	remaining[stateEnd] = struct{}{}
+	for i := range dfa.states {
+		remaining[i] = struct{}{}
+	}
+
+	for stateDelete := range dfa.states {
+		for stateFrom := range remaining {
+			if stateFrom == stateDelete {
+				continue
+			}
+			r1 := transitions[stateFrom][stateDelete]
+			if r1 == "" {
+				continue
+			}
+			for stateTo := range remaining {
+				if stateTo == stateDelete {
+					continue
+				}
+				r2 := transitions[stateDelete][stateTo]
+				if r2 == "" {
+					continue
+				}
+
+				middle := r2
+				loop := kleene(transitions[stateDelete][stateDelete])
+				if loop != "$" {
+					middle = concat(loop, r2)
+				}
+				merge(stateFrom, stateTo, concat(r1, middle))
+			}
+		}
+
+		delete(remaining, stateDelete)
+		delete(transitions, stateDelete)
+		for k := range transitions {
+			delete(transitions[k], stateDelete)
+		}
+	}
+
+	return transitions[stateBegin][stateEnd], nil
 }
 
 func (dfa *DFA) Reverse() (Regex, error) {
